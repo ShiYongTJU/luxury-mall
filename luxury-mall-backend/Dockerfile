@@ -11,7 +11,7 @@ COPY package*.json ./
 # 安装所有依赖（包括 devDependencies，用于构建）
 RUN npm ci
 
-# 复制源代码
+# 复制所有文件（包括 tsconfig.json、src、data 等）
 COPY . .
 
 # 构建 TypeScript

@@ -13,7 +13,5 @@ yarn-error.log*
 *.log
 .vscode
 .idea
-tsconfig.json
-src
 
 
