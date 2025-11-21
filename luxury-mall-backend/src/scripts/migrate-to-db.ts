@@ -249,11 +249,34 @@ async function main() {
 
   try {
     // 读取并执行 SQL 脚本创建表
-    const schemaPath = path.join(__dirname, '../database/schema.sql')
+    // 优先从 src 目录读取（开发环境），如果不存在则从 dist 目录读取（生产环境）
+    let schemaPath = path.join(__dirname, '../../src/database/schema.sql')
+    if (!fs.existsSync(schemaPath)) {
+      schemaPath = path.join(__dirname, '../database/schema.sql')
+    }
+    
     if (fs.existsSync(schemaPath)) {
+      console.log(`读取 SQL 脚本: ${schemaPath}`)
       const schema = fs.readFileSync(schemaPath, 'utf-8')
-      await pool.query(schema)
+      // 分割 SQL 语句并逐个执行（PostgreSQL 不支持一次执行多个语句）
+      const statements = schema.split(';').filter(s => s.trim().length > 0)
+      for (const statement of statements) {
+        const trimmed = statement.trim()
+        if (trimmed && !trimmed.startsWith('--')) {
+          try {
+            await pool.query(trimmed)
+          } catch (error: any) {
+            // 忽略表已存在的错误
+            if (!error.message?.includes('already exists')) {
+              console.warn(`执行 SQL 语句时出错: ${error.message}`)
+            }
+          }
+        }
+      }
       console.log('数据库表结构创建完成')
+    } else {
+      console.error(`SQL 脚本文件不存在: ${schemaPath}`)
+      throw new Error('SQL 脚本文件不存在')
     }
 
     // 迁移数据
