@@ -18,15 +18,22 @@ COPY . .
 RUN npm run build
 
 # 确保 dist/database 目录存在，并复制 schema.sql 到 dist 目录，供迁移脚本使用
-# 使用显式检查，确保复制成功
+# 检查 schema.sql 是文件还是目录，如果是目录则删除后复制文件
 RUN mkdir -p dist/database && \
+    if [ -d src/database/schema.sql ]; then \
+      echo "⚠ 警告: src/database/schema.sql 是目录，正在删除..." && \
+      rm -rf src/database/schema.sql; \
+    fi && \
     if [ -f src/database/schema.sql ]; then \
       cp src/database/schema.sql dist/database/schema.sql && \
       echo "✓ schema.sql 已复制到 dist/database/" && \
       ls -lh dist/database/schema.sql; \
     else \
       echo "✗ 错误: src/database/schema.sql 不存在" && \
+      echo "检查 src/database/ 目录内容:" && \
       ls -la src/database/ && \
+      echo "检查项目根目录:" && \
+      find . -name "schema.sql" -type f 2>/dev/null | head -10 && \
       exit 1; \
     fi
 
