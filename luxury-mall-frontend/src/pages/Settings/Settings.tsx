@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '@/context/UserContext'
-import { useAddress } from '@/context/AddressContext'
-import type { Address } from '@/types/address'
 import { toast } from '@/components/basic/Toast/Toast'
-import { confirm } from '@/components/basic/Confirm/Confirm'
 import AddressManagement from './AddressManagement'
 import './Settings.css'
 
