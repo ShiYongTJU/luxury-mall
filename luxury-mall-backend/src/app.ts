@@ -23,6 +23,9 @@ if (process.env.USE_DATABASE === 'true') {
 const app = express()
 const PORT = process.env.PORT || 3001
 
+// 禁用 Express 的 ETag（防止 304 响应）
+app.set('etag', false)
+
 // CORS 配置
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',')
@@ -54,6 +57,17 @@ app.use(cors({
 }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// 禁用缓存中间件 - 确保所有 API 返回 200 而不是 304
+app.use((req, res, next) => {
+  // 禁用 ETag
+  res.set('ETag', '')
+  // 设置无缓存响应头
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+  res.set('Pragma', 'no-cache')
+  res.set('Expires', '0')
+  next()
+})
 
 // 健康检查
 app.get('/health', (req, res) => {

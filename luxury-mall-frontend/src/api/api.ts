@@ -51,7 +51,24 @@ apiClient.interceptors.response.use(
         }
       }
       // 服务器返回了错误状态码
-      throw new Error(error.response.data?.message || error.response.data?.error || '请求失败')
+      // 后端返回格式: { error: { message: "..." } } 或 { message: "..." }
+      const errorData = error.response.data
+      let errorMessage = '请求失败'
+      if (errorData) {
+        if (typeof errorData === 'string') {
+          errorMessage = errorData
+        } else if (errorData.message) {
+          errorMessage = errorData.message
+        } else if (errorData.error) {
+          // 处理 { error: { message: "..." } } 格式
+          if (typeof errorData.error === 'string') {
+            errorMessage = errorData.error
+          } else if (errorData.error.message) {
+            errorMessage = errorData.error.message
+          }
+        }
+      }
+      throw new Error(errorMessage)
     } else if (error.request) {
       // 请求已发出，但没有收到响应
       throw new Error('网络错误，请检查网络连接')

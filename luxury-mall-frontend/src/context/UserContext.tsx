@@ -91,7 +91,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       toast.success('登录成功')
     } catch (error: any) {
       console.error('登录失败:', error)
-      toast.error(error.message || '登录失败，请检查手机号和密码')
+      // 提取错误消息
+      let errorMessage = '登录失败，请检查手机号和密码'
+      if (error) {
+        if (typeof error === 'string') {
+          errorMessage = error
+        } else if (error.message) {
+          errorMessage = error.message
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error
+        }
+      }
+      toast.error(errorMessage)
       throw error
     }
   }, [])
@@ -104,7 +117,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       toast.success('注册成功')
     } catch (error: any) {
       console.error('注册失败:', error)
-      toast.error(error.message || '注册失败，请稍后再试')
+      // 提取错误消息
+      let errorMessage = '注册失败，请稍后再试'
+      if (error) {
+        if (typeof error === 'string') {
+          errorMessage = error
+        } else if (error.message) {
+          errorMessage = error.message
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error
+        }
+      }
+      toast.error(errorMessage)
       throw error
     }
   }, [])
