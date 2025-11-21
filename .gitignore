@@ -181,11 +181,13 @@ $RECYCLE.BIN/
 # ============================================
 # 项目特定
 # ============================================
-# 数据备份文件
-*.sql
+# 数据备份文件（排除数据库 schema 文件）
 *.dump
 backup/
 backups/
+# 允许数据库 schema 文件
+!luxury-mall-backend/src/database/schema.sql
+!**/schema.sql
 
 # 部署相关
 deploy.sh
