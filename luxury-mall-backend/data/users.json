@@ -1,18 +1,10 @@
 [
   {
-    "id": "user-1763725713874-4282ug134",
-    "username": "siki",
-    "phone": "18255655750",
-    "password": "$2b$10$6Cm95gIPgZkya1.ZrL7O/eCnFA7gdCph9GdjEEFPTG4jF9mgmrq3W",
-    "createTime": "2025-11-21T11:48:33.874Z",
-    "updateTime": "2025-11-21T11:48:33.874Z"
-  },
-  {
-    "id": "user-1763726950135-y4e7grdnj",
-    "username": "EEEE",
-    "phone": "18888888888",
-    "password": "$2b$10$bzzxiwq0D3WUB9TWB/hBPeZkTwNFAkiIt/MS4qPDVW0P8XO5dUinu",
-    "createTime": "2025-11-21T12:09:10.135Z",
-    "updateTime": "2025-11-21T12:09:10.135Z"
+    "id": "user-1763739183625-8das2x66r",
+    "username": "yy",
+    "phone": "19999999999",
+    "password": "$2b$10$EXkNui6e4aJckMolYB/xcuBTRrI1.uSm3sut4VA1gM2jpfyNFqLpi",
+    "createTime": "2025-11-21T15:33:03.625Z",
+    "updateTime": "2025-11-21T15:33:03.625Z"
   }
-
+]
