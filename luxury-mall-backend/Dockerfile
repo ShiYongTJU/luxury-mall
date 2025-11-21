@@ -14,19 +14,24 @@ RUN npm ci
 # 先复制所有文件
 COPY . .
 
-# 处理 schema.sql：如果是目录则删除，确保是文件
+# 处理 schema.sql：如果是目录则删除，然后检查文件是否存在
 RUN echo "=== Processing schema.sql ===" && \
     if [ -d src/database/schema.sql ]; then \
       echo "WARNING: src/database/schema.sql is a directory, removing..." && \
-      rm -rf src/database/schema.sql && \
-      echo "Directory removed. Please ensure schema.sql file exists in src/database/ on the server." && \
-      echo "You can upload it using: scp schema.sql ubuntu@server:/opt/luxury-mall/luxury-mall/luxury-mall-backend/src/database/" && \
-      exit 1; \
+      rm -rf src/database/schema.sql; \
     fi && \
     if [ ! -f src/database/schema.sql ]; then \
+      echo "" && \
+      echo "========================================" && \
       echo "ERROR: src/database/schema.sql file does not exist!" && \
-      echo "Please ensure the file exists on the server before building." && \
-      echo "Upload command: scp schema.sql ubuntu@server:/opt/luxury-mall/luxury-mall/luxury-mall-backend/src/database/" && \
+      echo "========================================" && \
+      echo "" && \
+      echo "Please fix this on the server before building:" && \
+      echo "1. Remove the directory: rm -rf /opt/luxury-mall/luxury-mall/luxury-mall-backend/src/database/schema.sql" && \
+      echo "2. Upload the file from local:" && \
+      echo "   scp F:\\CODE\\luxury-mall-backend\\src\\database\\schema.sql ubuntu@server:/opt/luxury-mall/luxury-mall/luxury-mall-backend/src/database/" && \
+      echo "3. Verify: ls -lh /opt/luxury-mall/luxury-mall/luxury-mall-backend/src/database/schema.sql" && \
+      echo "" && \
       exit 1; \
     else \
       echo "OK: src/database/schema.sql is a valid file" && \
