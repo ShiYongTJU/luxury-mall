@@ -14,28 +14,24 @@ RUN npm ci
 # 先复制所有文件
 COPY . .
 
-# 清理可能存在的 schema.sql 目录（如果存在）
-RUN if [ -d src/database/schema.sql ]; then \
-      echo "WARNING: schema.sql is a directory, removing..." && \
-      rm -rf src/database/schema.sql; \
-    fi
-
-# 显式复制 schema.sql 文件（确保文件被包含）
-COPY src/database/schema.sql src/database/schema.sql
-
-# 验证 schema.sql 文件
-RUN echo "=== Verifying schema.sql file ===" && \
-    if [ -f src/database/schema.sql ]; then \
-      echo "OK: src/database/schema.sql exists" && \
-      ls -lh src/database/schema.sql && \
-      head -5 src/database/schema.sql; \
-    else \
-      echo "ERROR: src/database/schema.sql does not exist after COPY" && \
-      echo "Contents of src/database/:" && \
-      ls -la src/database/ 2>&1 && \
-      echo "Searching for .sql files in build context:" && \
-      find . -name "*.sql" -type f 2>/dev/null | head -10 && \
+# 处理 schema.sql：如果是目录则删除，确保是文件
+RUN echo "=== Processing schema.sql ===" && \
+    if [ -d src/database/schema.sql ]; then \
+      echo "WARNING: src/database/schema.sql is a directory, removing..." && \
+      rm -rf src/database/schema.sql && \
+      echo "Directory removed. Please ensure schema.sql file exists in src/database/ on the server." && \
+      echo "You can upload it using: scp schema.sql ubuntu@server:/opt/luxury-mall/luxury-mall/luxury-mall-backend/src/database/" && \
       exit 1; \
+    fi && \
+    if [ ! -f src/database/schema.sql ]; then \
+      echo "ERROR: src/database/schema.sql file does not exist!" && \
+      echo "Please ensure the file exists on the server before building." && \
+      echo "Upload command: scp schema.sql ubuntu@server:/opt/luxury-mall/luxury-mall/luxury-mall-backend/src/database/" && \
+      exit 1; \
+    else \
+      echo "OK: src/database/schema.sql is a valid file" && \
+      ls -lh src/database/schema.sql && \
+      head -3 src/database/schema.sql; \
     fi
 
 # 构建 TypeScript
