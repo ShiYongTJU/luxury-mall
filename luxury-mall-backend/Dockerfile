@@ -17,11 +17,24 @@ COPY . .
 # 构建 TypeScript
 RUN npm run build
 
-# 复制 schema.sql 到 dist 目录，供迁移脚本使用
-RUN cp src/database/schema.sql dist/database/schema.sql || true
+# 确保 dist/database 目录存在，并复制 schema.sql 到 dist 目录，供迁移脚本使用
+# 使用显式检查，确保复制成功
+RUN mkdir -p dist/database && \
+    if [ -f src/database/schema.sql ]; then \
+      cp src/database/schema.sql dist/database/schema.sql && \
+      echo "✓ schema.sql 已复制到 dist/database/" && \
+      ls -lh dist/database/schema.sql; \
+    else \
+      echo "✗ 错误: src/database/schema.sql 不存在" && \
+      ls -la src/database/ && \
+      exit 1; \
+    fi
 
 # 删除 devDependencies 以减小镜像大小
 RUN npm prune --production
+
+# 验证文件在最终镜像中仍然存在
+RUN ls -lh dist/database/schema.sql || (echo "✗ 错误: dist/database/schema.sql 在最终镜像中不存在" && exit 1)
 
 # 暴露端口
 EXPOSE 3001

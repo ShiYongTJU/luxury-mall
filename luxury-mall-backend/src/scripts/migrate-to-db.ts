@@ -249,36 +249,59 @@ async function main() {
 
   try {
     // 读取并执行 SQL 脚本创建表
-    // 优先从 dist/database/schema.sql 读取（生产环境，Dockerfile 会复制）
-    // 如果不存在，则从 src/database/schema.sql 读取（开发环境）
-    let schemaPath = path.join(__dirname, '../database/schema.sql')
+    // __dirname 在编译后是 /app/dist/scripts
+    console.log(`当前脚本目录: ${__dirname}`)
     
-    if (!fs.existsSync(schemaPath)) {
-      // 尝试从 src 目录读取
-      const projectRoot = path.join(__dirname, '../..')
-      schemaPath = path.join(projectRoot, 'src/database/schema.sql')
+    // 尝试多个可能的路径
+    const possiblePaths = [
+      path.join(__dirname, '../database/schema.sql'),  // /app/dist/database/schema.sql
+      path.join(__dirname, '../../src/database/schema.sql'),  // /app/src/database/schema.sql
+      '/app/src/database/schema.sql',  // 绝对路径
+      '/app/dist/database/schema.sql'  // 绝对路径
+    ]
+    
+    let schemaPath: string | null = null
+    
+    // 查找存在的文件
+    for (const testPath of possiblePaths) {
+      console.log(`检查路径: ${testPath}`)
+      if (fs.existsSync(testPath)) {
+        const stats = fs.statSync(testPath)
+        if (stats.isFile()) {
+          schemaPath = testPath
+          console.log(`找到 SQL 文件: ${schemaPath}`)
+          break
+        } else {
+          console.log(`路径存在但不是文件: ${testPath} (是目录)`)
+        }
+      } else {
+        console.log(`路径不存在: ${testPath}`)
+      }
     }
     
-    // 检查文件是否存在且是文件（不是目录）
-    if (!fs.existsSync(schemaPath)) {
-      console.error(`SQL 脚本文件不存在: ${schemaPath}`)
-      // 尝试列出可能的目录内容以便调试
-      const possibleDirs = [
+    // 如果没找到，列出目录内容以便调试
+    if (!schemaPath) {
+      console.error('未找到 schema.sql 文件，尝试列出相关目录:')
+      const debugDirs = [
+        path.join(__dirname, '..'),
         path.join(__dirname, '../database'),
+        path.join(__dirname, '../../src'),
         path.join(__dirname, '../../src/database'),
-        path.join(__dirname, '../..')
+        '/app',
+        '/app/src',
+        '/app/dist'
       ]
-      for (const dir of possibleDirs) {
+      for (const dir of debugDirs) {
         if (fs.existsSync(dir)) {
-          console.log(`目录 ${dir} 的内容:`, fs.readdirSync(dir))
+          try {
+            const contents = fs.readdirSync(dir)
+            console.log(`目录 ${dir} 的内容:`, contents)
+          } catch (e: any) {
+            console.log(`无法读取目录 ${dir}: ${e.message}`)
+          }
         }
       }
-      throw new Error(`SQL 脚本文件不存在: ${schemaPath}`)
-    }
-    
-    const stats = fs.statSync(schemaPath)
-    if (!stats.isFile()) {
-      throw new Error(`路径 ${schemaPath} 不是一个文件（可能是目录）`)
+      throw new Error('未找到 schema.sql 文件')
     }
     
     console.log(`读取 SQL 脚本: ${schemaPath}`)
