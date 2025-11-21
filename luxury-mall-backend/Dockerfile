@@ -17,6 +17,9 @@ COPY . .
 # 构建 TypeScript
 RUN npm run build
 
+# 复制 schema.sql 到 dist 目录，供迁移脚本使用
+RUN cp src/database/schema.sql dist/database/schema.sql || true
+
 # 删除 devDependencies 以减小镜像大小
 RUN npm prune --production
 

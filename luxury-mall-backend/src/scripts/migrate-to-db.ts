@@ -249,35 +249,90 @@ async function main() {
 
   try {
     // 读取并执行 SQL 脚本创建表
-    // 优先从 src 目录读取（开发环境），如果不存在则从 dist 目录读取（生产环境）
-    let schemaPath = path.join(__dirname, '../../src/database/schema.sql')
+    // 优先从 dist/database/schema.sql 读取（生产环境，Dockerfile 会复制）
+    // 如果不存在，则从 src/database/schema.sql 读取（开发环境）
+    let schemaPath = path.join(__dirname, '../database/schema.sql')
+    
     if (!fs.existsSync(schemaPath)) {
-      schemaPath = path.join(__dirname, '../database/schema.sql')
+      // 尝试从 src 目录读取
+      const projectRoot = path.join(__dirname, '../..')
+      schemaPath = path.join(projectRoot, 'src/database/schema.sql')
     }
     
-    if (fs.existsSync(schemaPath)) {
-      console.log(`读取 SQL 脚本: ${schemaPath}`)
-      const schema = fs.readFileSync(schemaPath, 'utf-8')
-      // 分割 SQL 语句并逐个执行（PostgreSQL 不支持一次执行多个语句）
-      const statements = schema.split(';').filter(s => s.trim().length > 0)
-      for (const statement of statements) {
-        const trimmed = statement.trim()
-        if (trimmed && !trimmed.startsWith('--')) {
-          try {
-            await pool.query(trimmed)
-          } catch (error: any) {
-            // 忽略表已存在的错误
-            if (!error.message?.includes('already exists')) {
-              console.warn(`执行 SQL 语句时出错: ${error.message}`)
-            }
+    // 检查文件是否存在且是文件（不是目录）
+    if (!fs.existsSync(schemaPath)) {
+      console.error(`SQL 脚本文件不存在: ${schemaPath}`)
+      // 尝试列出可能的目录内容以便调试
+      const possibleDirs = [
+        path.join(__dirname, '../database'),
+        path.join(__dirname, '../../src/database'),
+        path.join(__dirname, '../..')
+      ]
+      for (const dir of possibleDirs) {
+        if (fs.existsSync(dir)) {
+          console.log(`目录 ${dir} 的内容:`, fs.readdirSync(dir))
+        }
+      }
+      throw new Error(`SQL 脚本文件不存在: ${schemaPath}`)
+    }
+    
+    const stats = fs.statSync(schemaPath)
+    if (!stats.isFile()) {
+      throw new Error(`路径 ${schemaPath} 不是一个文件（可能是目录）`)
+    }
+    
+    console.log(`读取 SQL 脚本: ${schemaPath}`)
+    const schema = fs.readFileSync(schemaPath, 'utf-8')
+    
+    // 分割 SQL 语句并逐个执行（PostgreSQL 不支持一次执行多个语句）
+    // 使用更智能的分割方式，按行分割后合并完整的语句
+    const lines = schema.split('\n')
+    const statements: string[] = []
+    let currentStatement = ''
+    
+    for (const line of lines) {
+      const trimmed = line.trim()
+      // 跳过注释和空行
+      if (!trimmed || trimmed.startsWith('--')) {
+        continue
+      }
+      
+      currentStatement += line + '\n'
+      
+      // 如果行以分号结尾，说明是一个完整的语句
+      if (trimmed.endsWith(';')) {
+        const stmt = currentStatement.trim()
+        if (stmt) {
+          statements.push(stmt)
+        }
+        currentStatement = ''
+      }
+    }
+    
+    // 添加最后一个语句（如果没有分号结尾）
+    if (currentStatement.trim()) {
+      statements.push(currentStatement.trim())
+    }
+    
+    console.log(`准备执行 ${statements.length} 条 SQL 语句...`)
+    
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i]
+      if (statement) {
+        try {
+          await pool.query(statement)
+        } catch (error: any) {
+          // 忽略表已存在的错误
+          if (error.code === '42P07' || error.message?.includes('already exists')) {
+            console.log(`表已存在，跳过语句 ${i + 1}`)
+          } else {
+            console.warn(`执行 SQL 语句 ${i + 1} 时出错: ${error.message}`)
+            console.warn(`语句预览: ${statement.substring(0, 100)}...`)
           }
         }
       }
-      console.log('数据库表结构创建完成')
-    } else {
-      console.error(`SQL 脚本文件不存在: ${schemaPath}`)
-      throw new Error('SQL 脚本文件不存在')
     }
+    console.log('数据库表结构创建完成')
 
     // 迁移数据
     await migrateUsers(pool)
