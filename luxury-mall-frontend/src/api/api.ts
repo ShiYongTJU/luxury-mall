@@ -65,27 +65,27 @@ apiClient.interceptors.response.use(
 // 获取首页配置数据
 export const getHomePageData = async (): Promise<HomePageData> => {
   const response = await apiClient.get<HomePageData>(API_ENDPOINTS.HOMEPAGE)
-  return response as HomePageData
+  return response as unknown as HomePageData
 }
 
 // 获取商品列表
 export const getProducts = async (category?: string): Promise<Product[]> => {
   const params = category ? { category } : {}
   const response = await apiClient.get<Product[]>(API_ENDPOINTS.PRODUCTS, { params })
-  return response as Product[]
+  return response as unknown as Product[]
 }
 
 // 获取分类列表
 export const getCategories = async (): Promise<Category[]> => {
   const response = await apiClient.get<Category[]>(API_ENDPOINTS.CATEGORIES)
-  return response as Category[]
+  return response as unknown as Category[]
 }
 
 // 获取商品详情
 export const getProductDetail = async (id: string): Promise<Product | null> => {
   try {
     const response = await apiClient.get<Product>(API_ENDPOINTS.PRODUCT_DETAIL(id))
-    return response as Product
+    return response as unknown as Product
   } catch (error: any) {
     if (error.message?.includes('404') || error.message?.includes('not found')) {
       return null
@@ -103,26 +103,26 @@ export const searchProducts = async (keyword: string): Promise<Product[]> => {
   const response = await apiClient.get<Product[]>(API_ENDPOINTS.SEARCH, {
     params: { q: keyword.trim() }
   })
-  return response as Product[]
+  return response as unknown as Product[]
 }
 
 // 创建订单
 export const createOrder = async (orderData: Omit<Order, 'id' | 'orderNo' | 'createTime'>): Promise<Order> => {
   const response = await apiClient.post<Order>(API_ENDPOINTS.ORDERS, orderData)
-  return response as Order
+  return response as unknown as Order
 }
 
 // 获取订单列表
 export const getOrders = async (): Promise<Order[]> => {
   const response = await apiClient.get<Order[]>(API_ENDPOINTS.ORDERS)
-  return response as Order[]
+  return response as unknown as Order[]
 }
 
 // 获取订单详情
 export const getOrderById = async (id: string): Promise<Order | null> => {
   try {
     const response = await apiClient.get<Order>(API_ENDPOINTS.ORDER_DETAIL(id))
-    return response as Order
+    return response as unknown as Order
   } catch (error: any) {
     if (error.message?.includes('404') || error.message?.includes('not found')) {
       return null
@@ -134,13 +134,13 @@ export const getOrderById = async (id: string): Promise<Order | null> => {
 // 支付订单
 export const payOrder = async (id: string): Promise<Order> => {
   const response = await apiClient.post<Order>(`${API_ENDPOINTS.ORDER_DETAIL(id)}/pay`)
-  return response as Order
+  return response as unknown as Order
 }
 
 // 取消订单
 export const cancelOrder = async (id: string): Promise<Order> => {
   const response = await apiClient.post<Order>(`${API_ENDPOINTS.ORDER_DETAIL(id)}/cancel`)
-  return response as Order
+  return response as unknown as Order
 }
 
 // ========== 地址相关 API ==========
@@ -148,14 +148,14 @@ export const cancelOrder = async (id: string): Promise<Order> => {
 // 获取所有地址
 export const getAddresses = async (): Promise<Address[]> => {
   const response = await apiClient.get<Address[]>(API_ENDPOINTS.ADDRESSES)
-  return response as Address[]
+  return response as unknown as Address[]
 }
 
 // 根据 ID 获取地址
 export const getAddressById = async (id: string): Promise<Address | null> => {
   try {
     const response = await apiClient.get<Address>(API_ENDPOINTS.ADDRESS_DETAIL(id))
-    return response as Address
+    return response as unknown as Address
   } catch (error: any) {
     if (error.message?.includes('404') || error.message?.includes('not found')) {
       return null
@@ -167,13 +167,13 @@ export const getAddressById = async (id: string): Promise<Address | null> => {
 // 创建地址
 export const createAddress = async (addressData: Omit<Address, 'id'>): Promise<Address> => {
   const response = await apiClient.post<Address>(API_ENDPOINTS.ADDRESSES, addressData)
-  return response as Address
+  return response as unknown as Address
 }
 
 // 更新地址
 export const updateAddress = async (id: string, updates: Partial<Address>): Promise<Address> => {
   const response = await apiClient.put<Address>(API_ENDPOINTS.ADDRESS_DETAIL(id), updates)
-  return response as Address
+  return response as unknown as Address
 }
 
 // 删除地址
@@ -184,7 +184,7 @@ export const deleteAddress = async (id: string): Promise<void> => {
 // 设置默认地址
 export const setDefaultAddress = async (id: string): Promise<Address> => {
   const response = await apiClient.patch<Address>(API_ENDPOINTS.SET_DEFAULT_ADDRESS(id))
-  return response as Address
+  return response as unknown as Address
 }
 
 // ========== 地区相关 API ==========
@@ -197,19 +197,19 @@ export interface Region {
 // 获取所有省份
 export const getProvinces = async (): Promise<Region[]> => {
   const response = await apiClient.get<Region[]>(API_ENDPOINTS.PROVINCES)
-  return response as Region[]
+  return response as unknown as Region[]
 }
 
 // 根据省份代码获取城市列表
 export const getCities = async (provinceCode: string): Promise<Region[]> => {
   const response = await apiClient.get<Region[]>(API_ENDPOINTS.CITIES(provinceCode))
-  return response as Region[]
+  return response as unknown as Region[]
 }
 
 // 根据省份和城市代码获取区县列表
 export const getDistricts = async (provinceCode: string, cityCode: string): Promise<Region[]> => {
   const response = await apiClient.get<Region[]>(API_ENDPOINTS.DISTRICTS(provinceCode, cityCode))
-  return response as Region[]
+  return response as unknown as Region[]
 }
 
 // ========== 用户相关 API ==========
@@ -217,18 +217,18 @@ export const getDistricts = async (provinceCode: string, cityCode: string): Prom
 // 注册
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
   const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.REGISTER, data)
-  return response as AuthResponse
+  return response as unknown as AuthResponse
 }
 
 // 登录
 export const login = async (data: LoginData): Promise<AuthResponse> => {
   const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.LOGIN, data)
-  return response as AuthResponse
+  return response as unknown as AuthResponse
 }
 
 // 获取当前用户信息
 export const getCurrentUser = async (): Promise<User> => {
   const response = await apiClient.get<User>(API_ENDPOINTS.GET_CURRENT_USER)
-  return response as User
+  return response as unknown as User
 }
 
