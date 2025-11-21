@@ -1,0 +1,164 @@
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  animation: confirmFadeIn 0.2s ease-out;
+  padding: 20px;
+}
+
+@keyframes confirmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.confirm-dialog {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: confirmSlideIn 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes confirmSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.confirm-header {
+  padding: 20px 20px 0;
+}
+
+.confirm-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  text-align: center;
+}
+
+.confirm-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.confirm-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+.confirm-icon-warning {
+  filter: grayscale(0);
+}
+
+.confirm-icon-danger {
+  filter: grayscale(0);
+}
+
+.confirm-icon-info {
+  filter: grayscale(0);
+}
+
+.confirm-message {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+  word-break: break-word;
+}
+
+.confirm-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.confirm-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirm-btn-cancel {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.confirm-btn-cancel:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+.confirm-btn-confirm {
+  color: #ffffff;
+}
+
+.confirm-btn-warning {
+  background: #ff9800;
+}
+
+.confirm-btn-warning:hover {
+  background: #f57c00;
+}
+
+.confirm-btn-danger {
+  background: #e53e3e;
+}
+
+.confirm-btn-danger:hover {
+  background: #c53030;
+}
+
+.confirm-btn-info {
+  background: #2196f3;
+}
+
+.confirm-btn-info:hover {
+  background: #1976d2;
+}
+
+/* PC端适配 */
+@media (min-width: 768px) {
+  .confirm-dialog {
+    max-width: 450px;
+  }
+
+  .confirm-title {
+    font-size: 20px;
+  }
+
+  .confirm-message {
+    font-size: 16px;
+  }
+
+  .confirm-btn {
+    font-size: 16px;
+    padding: 14px;
+  }
+}
+

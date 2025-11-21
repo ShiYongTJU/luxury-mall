@@ -1,0 +1,18 @@
+version: '3.8'
+
+# 开发环境配置 - 使用 JSON 文件存储，不启动 PostgreSQL
+# 使用方法: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  backend:
+    depends_on: []  # 移除对 PostgreSQL 的依赖
+    environment:
+      - USE_DATABASE=false
+      - NODE_ENV=development
+
+  # 不启动 PostgreSQL 服务
+  postgres:
+    profiles:
+      - dont-start
+
+

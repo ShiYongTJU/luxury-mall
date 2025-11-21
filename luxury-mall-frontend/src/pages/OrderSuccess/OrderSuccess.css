@@ -1,0 +1,86 @@
+.order-success {
+  min-height: 100vh;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.order-success-content {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 60px 40px;
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.order-success-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: #4caf50;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+}
+
+.order-success-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.order-success-order-no {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.order-success-message {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.order-success-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.order-success-btn {
+  padding: 12px 32px;
+  border: 1px solid #e8e8e8;
+  background: #ffffff;
+  color: #666;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.order-success-btn:hover {
+  border-color: #e53e3e;
+  color: #e53e3e;
+}
+
+.order-success-btn-primary {
+  background: #e53e3e;
+  color: #ffffff;
+  border-color: #e53e3e;
+}
+
+.order-success-btn-primary:hover {
+  background: #c53030;
+}
+
+

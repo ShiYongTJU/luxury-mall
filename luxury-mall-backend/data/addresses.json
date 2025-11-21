@@ -1,0 +1,50 @@
+[
+  {
+    "name": "siki",
+    "phone": "14533333333",
+    "province": "北京市",
+    "city": "北京市",
+    "district": "东城区",
+    "detail": "北京大学啦啦啦",
+    "isDefault": true,
+    "tag": "",
+    "userId": "user-1763725713874-4282ug134",
+    "id": "addr-1763726374455-92zk97p2t"
+  },
+  {
+    "name": "SIKI",
+    "phone": "13455566666",
+    "province": "天津市",
+    "city": "天津市",
+    "district": "河东区",
+    "detail": "DWDWDWD",
+    "isDefault": false,
+    "tag": "",
+    "userId": "user-1763725713874-4282ug134",
+    "id": "addr-1763726804606-1hi8sm4ql"
+  },
+  {
+    "name": "EEEEE",
+    "phone": "17777777777",
+    "province": "天津市",
+    "city": "天津市",
+    "district": "河西区",
+    "detail": "77777777777",
+    "isDefault": true,
+    "tag": "77",
+    "userId": "user-1763726950135-y4e7grdnj",
+    "id": "addr-1763726981853-rqi6fb2yx"
+  },
+  {
+    "name": "dd",
+    "phone": "18111112222",
+    "province": "天津市",
+    "city": "天津市",
+    "district": "河东区",
+    "detail": "ffffffffffffff",
+    "isDefault": false,
+    "tag": "ffffff",
+    "userId": "user-1763725713874-4282ug134",
+    "id": "addr-1763727912221-1ran1lwkg"
+  }
+]

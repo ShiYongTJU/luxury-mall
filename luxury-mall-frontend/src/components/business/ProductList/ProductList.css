@@ -1,0 +1,50 @@
+.product-list-container {
+  margin-bottom: 16px;
+  background: #ffffff;
+  padding: 16px 0;
+}
+
+.product-list-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.product-list-title::after {
+  content: '更多 ›';
+  font-size: 14px;
+  font-weight: 400;
+  color: #999;
+}
+
+.product-list {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.product-list-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.product-list-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.product-list-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 768px) {
+  .product-list-3,
+  .product-list-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+

@@ -1,0 +1,53 @@
+.groupbuy-container {
+  background: #ffffff;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.groupbuy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.groupbuy-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  letter-spacing: -0.5px;
+}
+
+.groupbuy-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.groupbuy-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.groupbuy-products::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .groupbuy-products {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+
+

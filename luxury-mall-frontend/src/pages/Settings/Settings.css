@@ -1,0 +1,391 @@
+.settings {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* 编辑地址页面时，整个页面背景设为白色 */
+.settings:has(.address-form) {
+  background: #ffffff;
+}
+
+.settings-header {
+  background: #ffffff;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.settings-back-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.settings-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  flex: 1;
+}
+
+.settings-add-btn {
+  padding: 6px 16px;
+  background: #e53e3e;
+  color: #ffffff;
+  border: none;
+  border-radius: 16px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-content {
+  padding: 12px 0;
+}
+
+/* 编辑地址页面背景设为白色 */
+.settings-content:has(.address-form) {
+  background: #ffffff;
+  min-height: calc(100vh - 60px);
+}
+
+.settings-section {
+  background: #ffffff;
+  margin-bottom: 12px;
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.settings-section-title {
+  padding: 16px;
+  font-size: 14px;
+  color: #999;
+  font-weight: 500;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.settings-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.settings-menu-item:last-child {
+  border-bottom: none;
+}
+
+.settings-menu-item:hover {
+  background-color: #fafafa;
+}
+
+.settings-menu-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.settings-menu-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-menu-icon {
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
+}
+
+.settings-menu-text {
+  font-size: 16px;
+  color: #333;
+}
+
+.settings-menu-value {
+  font-size: 14px;
+  color: #999;
+}
+
+.settings-menu-arrow {
+  font-size: 20px;
+  color: #999;
+}
+
+/* 地址管理样式 */
+.address-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.address-item {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+}
+
+.address-item-header {
+  margin-bottom: 8px;
+}
+
+.address-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.address-item-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.address-item-phone {
+  font-size: 14px;
+  color: #666;
+}
+
+.address-item-default {
+  padding: 2px 8px;
+  background: #e53e3e;
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.address-item-tag {
+  padding: 2px 8px;
+  background: #f0f0f0;
+  color: #666;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.address-item-detail {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.address-item-actions {
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f5f5f5;
+}
+
+.address-action-btn {
+  padding: 6px 16px;
+  background: #ffffff;
+  color: #666;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.address-action-btn:hover {
+  border-color: #e53e3e;
+  color: #e53e3e;
+}
+
+.address-action-btn-danger {
+  color: #e53e3e;
+}
+
+.address-action-btn-danger:hover {
+  background: #fff5f5;
+  border-color: #e53e3e;
+}
+
+.address-empty {
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.address-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.address-empty-text {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 24px;
+}
+
+.address-empty-btn {
+  padding: 12px 32px;
+  background: #e53e3e;
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* 地址表单样式 */
+.address-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+}
+
+.address-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.address-form-group label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.address-form-required {
+  color: #e53e3e;
+  margin-left: 2px;
+}
+
+.address-form-group input[type="text"],
+.address-form-group input[type="tel"] {
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.address-form-group input[type="text"]:focus,
+.address-form-group input[type="tel"]:focus {
+  outline: none;
+  border-color: #e53e3e;
+}
+
+.address-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.address-form-select {
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #ffffff;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  min-width: 100px;
+}
+
+.address-form-select:focus {
+  outline: none;
+  border-color: #e53e3e;
+}
+
+.address-form-select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.address-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.address-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.address-form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.address-form-cancel-btn,
+.address-form-submit-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.address-form-cancel-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.address-form-cancel-btn:hover {
+  background: #e8e8e8;
+}
+
+.address-form-submit-btn {
+  background: #e53e3e;
+  color: #ffffff;
+}
+
+.address-form-submit-btn:hover {
+  background: #c53030;
+}
+
+/* PC端响应式布局 */
+@media (min-width: 768px) {
+  .settings {
+    max-width: min(100vw, 100vh);
+    margin: 0 auto;
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .settings {
+      max-width: 100vh;
+    }
+  }
+}
+

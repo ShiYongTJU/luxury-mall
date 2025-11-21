@@ -1,0 +1,160 @@
+[
+  {
+    "items": [
+      {
+        "productId": "3",
+        "name": "真丝围巾",
+        "image": "https://images.unsplash.com/photo-1583292650898-7d22cd27ca6f?w=800",
+        "price": 3200,
+        "quantity": 1,
+        "selectedSpecs": {
+          "color": {
+            "id": "color-amber",
+            "label": "琥珀橙",
+            "specName": "配色"
+          }
+        }
+      }
+    ],
+    "address": {
+      "name": "SIKI",
+      "phone": "13455566666",
+      "province": "天津市",
+      "city": "天津市",
+      "district": "河东区",
+      "detail": "DWDWDWD",
+      "isDefault": false,
+      "tag": "",
+      "id": "addr-1763726804606-1hi8sm4ql"
+    },
+    "totalPrice": 3200,
+    "status": "paid",
+    "userId": "user-1763725713874-4282ug134",
+    "id": "order-1763726809308",
+    "orderNo": "ORD1763726809308",
+    "createTime": "2025-11-21T12:06:49.308Z",
+    "payTime": "2025-11-21T12:06:56.768Z"
+  },
+  {
+    "items": [
+      {
+        "productId": "2",
+        "name": "优雅女士手表",
+        "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800",
+        "price": 25800,
+        "quantity": 1,
+        "selectedSpecs": {
+          "strap": {
+            "id": "strap-milanese",
+            "label": "米兰尼斯钢带",
+            "specName": "表带"
+          },
+          "size": {
+            "id": "size-36",
+            "label": "36mm",
+            "specName": "表径"
+          }
+        }
+      }
+    ],
+    "address": {
+      "name": "EEEEE",
+      "phone": "17777777777",
+      "province": "天津市",
+      "city": "天津市",
+      "district": "河西区",
+      "detail": "77777777777",
+      "isDefault": true,
+      "tag": "77",
+      "id": "addr-1763726981853-rqi6fb2yx"
+    },
+    "totalPrice": 25800,
+    "status": "paid",
+    "userId": "user-1763726950135-y4e7grdnj",
+    "id": "order-1763726983399",
+    "orderNo": "ORD1763726983399",
+    "createTime": "2025-11-21T12:09:43.399Z",
+    "payTime": "2025-11-21T12:09:49.265Z"
+  },
+  {
+    "items": [
+      {
+        "productId": "2",
+        "name": "优雅女士手表",
+        "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800",
+        "price": 25800,
+        "quantity": 26,
+        "selectedSpecs": {
+          "strap": {
+            "id": "strap-milanese",
+            "label": "米兰尼斯钢带",
+            "specName": "表带"
+          },
+          "size": {
+            "id": "size-36",
+            "label": "36mm",
+            "specName": "表径"
+          }
+        }
+      }
+    ],
+    "address": {
+      "name": "siki",
+      "phone": "14533333333",
+      "province": "北京市",
+      "city": "北京市",
+      "district": "东城区",
+      "detail": "北京大学啦啦啦",
+      "isDefault": true,
+      "tag": "",
+      "id": "addr-1763726374455-92zk97p2t"
+    },
+    "totalPrice": 670800,
+    "status": "pending",
+    "userId": "user-1763725713874-4282ug134",
+    "id": "order-1763727914891",
+    "orderNo": "ORD1763727914892",
+    "createTime": "2025-11-21T12:25:14.892Z"
+  },
+  {
+    "items": [
+      {
+        "productId": "5",
+        "name": "钻石项链",
+        "image": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800",
+        "price": 58800,
+        "quantity": 23,
+        "selectedSpecs": {
+          "carat": {
+            "id": "carat-12",
+            "label": "1.20ct",
+            "specName": "主钻尺寸"
+          },
+          "chain": {
+            "id": "chain-45",
+            "label": "45cm",
+            "specName": "链长"
+          }
+        }
+      }
+    ],
+    "address": {
+      "name": "dd",
+      "phone": "18111112222",
+      "province": "天津市",
+      "city": "天津市",
+      "district": "河东区",
+      "detail": "ffffffffffffff",
+      "isDefault": false,
+      "tag": "ffffff",
+      "id": "addr-1763727912221-1ran1lwkg"
+    },
+    "totalPrice": 1352400,
+    "status": "paid",
+    "userId": "user-1763725713874-4282ug134",
+    "id": "order-1763727955723",
+    "orderNo": "ORD1763727955723",
+    "createTime": "2025-11-21T12:25:55.723Z",
+    "payTime": "2025-11-21T12:26:06.997Z"
+  }
+]

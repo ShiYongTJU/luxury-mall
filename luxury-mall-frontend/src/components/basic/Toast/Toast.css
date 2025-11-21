@@ -1,0 +1,74 @@
+.toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+  max-width: 90%;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: toastSlideIn 0.3s ease-out;
+  pointer-events: auto;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-success {
+  background: #4caf50;
+}
+
+.toast-error {
+  background: #f44336;
+}
+
+.toast-info {
+  background: #2196f3;
+}
+
+.toast-warning {
+  background: #ff9800;
+}
+
+.toast-message {
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* PC端适配 */
+@media (min-width: 768px) {
+  .toast-container {
+    top: 40px;
+  }
+
+  .toast {
+    font-size: 15px;
+    padding: 14px 24px;
+  }
+}
+
+

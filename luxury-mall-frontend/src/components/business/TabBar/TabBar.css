@@ -1,0 +1,75 @@
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  background: transparent;
+  z-index: 1000;
+}
+
+.tab-bar-wrapper {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
+  background: #ffffff;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* PC端响应式布局：TabBar宽度与内容区域保持一致 */
+@media (min-width: 768px) {
+  .tab-bar-wrapper {
+    max-width: min(100vw, 100vh);
+  }
+
+  /* 当视口宽度大于高度时，限制TabBar宽度为视口高度 */
+  @media (min-aspect-ratio: 1/1) {
+    .tab-bar-wrapper {
+      max-width: 100vh;
+    }
+  }
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 8px 0;
+}
+
+.tab-icon {
+  font-size: 22px;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+  filter: grayscale(100%);
+  opacity: 0.6;
+}
+
+.tab-item.active .tab-icon {
+  filter: grayscale(0%);
+  opacity: 1;
+  color: #e53e3e;
+}
+
+.tab-label {
+  font-size: 12px;
+  color: #999;
+  transition: color 0.3s ease;
+}
+
+.tab-item.active .tab-label {
+  color: #e53e3e;
+  font-weight: 500;
+}
+
+
