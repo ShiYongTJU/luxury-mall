@@ -11,7 +11,7 @@ COPY package*.json ./
 # 安装所有依赖（包括 devDependencies，用于构建）
 RUN npm ci
 
-# 先复制除了可能有问题文件之外的所有文件
+# 先复制所有文件
 COPY . .
 
 # 清理可能存在的 schema.sql 目录（如果存在）
@@ -20,17 +20,20 @@ RUN if [ -d src/database/schema.sql ]; then \
       rm -rf src/database/schema.sql; \
     fi
 
+# 显式复制 schema.sql 文件（确保文件被包含）
+COPY src/database/schema.sql src/database/schema.sql
+
 # 验证 schema.sql 文件
 RUN echo "=== Verifying schema.sql file ===" && \
     if [ -f src/database/schema.sql ]; then \
       echo "OK: src/database/schema.sql exists" && \
       ls -lh src/database/schema.sql && \
-      file src/database/schema.sql; \
+      head -5 src/database/schema.sql; \
     else \
-      echo "ERROR: src/database/schema.sql does not exist" && \
+      echo "ERROR: src/database/schema.sql does not exist after COPY" && \
       echo "Contents of src/database/:" && \
       ls -la src/database/ 2>&1 && \
-      echo "Searching for .sql files:" && \
+      echo "Searching for .sql files in build context:" && \
       find . -name "*.sql" -type f 2>/dev/null | head -10 && \
       exit 1; \
     fi
