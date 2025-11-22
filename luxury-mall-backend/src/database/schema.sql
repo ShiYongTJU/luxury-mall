@@ -140,4 +140,38 @@ CREATE TABLE IF NOT EXISTS order_addresses (
 
 CREATE INDEX idx_order_addresses_order_id ON order_addresses(order_id);
 
+-- 首页组件配置表
+CREATE TABLE IF NOT EXISTS homepage_components (
+    id VARCHAR(100) PRIMARY KEY,
+    type VARCHAR(50) NOT NULL, -- carousel, seckill, groupbuy, productList, guessYouLike
+    title VARCHAR(200), -- 组件标题
+    config TEXT, -- JSON 配置（查询条件、数量限制等）
+    sort_order INTEGER DEFAULT 0, -- 排序顺序
+    is_enabled BOOLEAN DEFAULT TRUE, -- 是否启用
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_homepage_components_sort_order ON homepage_components(sort_order);
+CREATE INDEX idx_homepage_components_enabled ON homepage_components(is_enabled);
+
+-- 分类页组件配置表（控制哪些分类要展示、展示顺序等）
+CREATE TABLE IF NOT EXISTS category_components (
+    id VARCHAR(100) PRIMARY KEY,
+    category_id VARCHAR(100) NOT NULL, -- 关联到 categories 表的 id
+    category_code VARCHAR(50), -- 分类的 code（用于查询商品）
+    title VARCHAR(200), -- 自定义标题（可选，默认使用分类名称）
+    icon VARCHAR(50), -- 图标（可选）
+    config TEXT, -- JSON 配置（每个子分类显示的商品数量等）
+    sort_order INTEGER DEFAULT 0, -- 排序顺序
+    is_enabled BOOLEAN DEFAULT TRUE, -- 是否启用
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_category_components_sort_order ON category_components(sort_order);
+CREATE INDEX idx_category_components_enabled ON category_components(is_enabled);
+CREATE INDEX idx_category_components_category_id ON category_components(category_id);
+
 

@@ -241,6 +241,123 @@ async function migrateRegions(pool: Pool) {
   console.log('地区迁移完成')
 }
 
+async function migrateHomepageComponents(pool: Pool) {
+  console.log('初始化首页组件配置...')
+  
+  // 默认组件配置
+  const defaultComponents = [
+    {
+      id: 'carousel-1',
+      type: 'carousel',
+      title: '热门推荐',
+      config: { limit: 5 },
+      sort_order: 1,
+      is_enabled: true
+    },
+    {
+      id: 'seckill-1',
+      type: 'seckill',
+      title: '限时秒杀',
+      config: { limit: 10 },
+      sort_order: 2,
+      is_enabled: true
+    },
+    {
+      id: 'groupbuy-1',
+      type: 'groupbuy',
+      title: '团购优惠',
+      config: { limit: 10 },
+      sort_order: 3,
+      is_enabled: true
+    },
+    {
+      id: 'product-list-1',
+      type: 'productList',
+      title: '精选商品',
+      config: { limit: 20 },
+      sort_order: 4,
+      is_enabled: true
+    },
+    {
+      id: 'guess-you-like-1',
+      type: 'guessYouLike',
+      title: '猜你喜欢',
+      config: { limit: 20 },
+      sort_order: 5,
+      is_enabled: true
+    }
+  ]
+  
+  for (const component of defaultComponents) {
+    try {
+      await pool.query(
+        `INSERT INTO homepage_components (id, type, title, config, sort_order, is_enabled, create_time, update_time)
+         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          component.id,
+          component.type,
+          component.title,
+          JSON.stringify(component.config),
+          component.sort_order,
+          component.is_enabled
+        ]
+      )
+    } catch (error: any) {
+      if (error.code !== '23505') {
+        console.error(`初始化组件 ${component.id} 失败:`, error.message)
+      }
+    }
+  }
+  
+  console.log('首页组件配置初始化完成')
+}
+
+async function migrateCategoryComponents(pool: Pool) {
+  console.log('初始化分类页组件配置...')
+  
+  // 获取所有一级分类
+  const mainCategoriesResult = await pool.query(`
+    SELECT id, name, code, sort_order
+    FROM categories
+    WHERE parent_id IS NULL
+    ORDER BY sort_order, name
+  `)
+  
+  if (mainCategoriesResult.rows.length === 0) {
+    console.log('没有找到一级分类，跳过分类页组件配置初始化')
+    return
+  }
+  
+  // 为每个一级分类创建组件配置
+  for (const category of mainCategoriesResult.rows) {
+    try {
+      const componentId = `category-${category.id}`
+      await pool.query(
+        `INSERT INTO category_components (id, category_id, category_code, title, icon, config, sort_order, is_enabled, create_time, update_time)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          componentId,
+          category.id,
+          category.code,
+          category.name, // 默认使用分类名称作为标题
+          '', // 默认图标为空
+          JSON.stringify({ productsLimit: 50 }), // 默认每个子分类显示50个商品
+          category.sort_order || 0,
+          true
+        ]
+      )
+    } catch (error: any) {
+      if (error.code !== '23505') {
+        console.error(`初始化分类页组件 ${category.id} 失败:`, error.message)
+      }
+    }
+  }
+  
+  console.log(`分类页组件配置初始化完成（${mainCategoriesResult.rows.length} 个分类）`)
+}
+
 async function main() {
   console.log('开始数据迁移...')
   
@@ -363,6 +480,8 @@ async function main() {
     await migrateProducts(pool)
     await migrateOrders(pool)
     await migrateRegions(pool)
+    await migrateHomepageComponents(pool)
+    await migrateCategoryComponents(pool)
 
     console.log('数据迁移完成！')
   } catch (error) {

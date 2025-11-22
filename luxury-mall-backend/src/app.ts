@@ -7,6 +7,7 @@ import orderRoutes from './routes/order.routes'
 import addressRoutes from './routes/address.routes'
 import regionRoutes from './routes/region.routes'
 import userRoutes from './routes/user.routes'
+import homepageRoutes from './routes/homepage.routes'
 import { errorHandler } from './middleware/errorHandler'
 import { initDatabase } from './database/pg-db'
 
@@ -85,6 +86,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/orders', orderRoutes)
 app.use('/api/addresses', addressRoutes)
 app.use('/api/regions', regionRoutes)
+app.use('/api/homepage', homepageRoutes)
 
 // 404 处理
 app.use((req, res) => {

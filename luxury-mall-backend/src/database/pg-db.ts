@@ -361,19 +361,54 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 // 分类相关
 export async function getCategories(): Promise<Category[]> {
-  // 获取所有一级分类
-  const mainCategoriesResult = await getPool().query(`
-    SELECT id, name, code, sort_order
-    FROM categories
-    WHERE parent_id IS NULL
-    ORDER BY sort_order, name
+  const pool = getPool()
+  
+  // 从配置表获取启用的分类配置，按 sort_order 排序
+  const categoryComponentsConfig = await pool.query(`
+    SELECT cc.id, cc.category_id, cc.category_code, cc.title, cc.icon, cc.config, cc.sort_order,
+           c.name as category_name, c.code as category_code_from_table
+    FROM category_components cc
+    INNER JOIN categories c ON cc.category_id = c.id
+    WHERE cc.is_enabled = TRUE AND c.parent_id IS NULL
+    ORDER BY cc.sort_order ASC, cc.create_time ASC
   `)
+  
+  // 如果没有配置，则使用默认逻辑（从 categories 表读取所有一级分类）
+  let mainCategories: any[] = []
+  
+  if (categoryComponentsConfig.rows.length > 0) {
+    // 使用配置表中的分类
+    mainCategories = categoryComponentsConfig.rows.map(row => ({
+      id: row.category_id,
+      name: row.title || row.category_name,
+      code: row.category_code || row.category_code_from_table,
+      icon: row.icon || '',
+      config: row.config ? JSON.parse(row.config) : {},
+      sort_order: row.sort_order
+    }))
+  } else {
+    // 默认逻辑：获取所有一级分类
+    const defaultResult = await pool.query(`
+      SELECT id, name, code, sort_order
+      FROM categories
+      WHERE parent_id IS NULL
+      ORDER BY sort_order, name
+    `)
+    mainCategories = defaultResult.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      code: row.code,
+      icon: '',
+      config: {},
+      sort_order: row.sort_order
+    }))
+  }
   
   const categories: Category[] = []
   
-  for (const mainCat of mainCategoriesResult.rows) {
+  for (const mainCat of mainCategories) {
     // 获取子分类
-    const subCategoriesResult = await getPool().query(`
+    const subCategoriesResult = await pool.query(`
       SELECT id, name, code, sort_order
       FROM categories
       WHERE parent_id = $1
@@ -382,14 +417,18 @@ export async function getCategories(): Promise<Category[]> {
     
     const subCategories = []
     
+    // 从配置中获取每个子分类显示的商品数量限制
+    const productsLimit = mainCat.config?.productsLimit || 50
+    
     for (const subCat of subCategoriesResult.rows) {
       // 获取该子分类下的商品
-      const productsResult = await getPool().query(`
+      // 注意：商品表中的 category 存储的是分类的 code，sub_category 存储的是子分类的 name
+      const productsResult = await pool.query(`
         SELECT * FROM products
         WHERE sub_category = $1 OR category = $2
         ORDER BY create_time DESC
-        LIMIT 50
-      `, [subCat.id, mainCat.id])
+        LIMIT $3
+      `, [subCat.name, mainCat.code, productsLimit])
       
       const products = productsResult.rows.map((row: any) => ({
         id: row.id,
@@ -422,7 +461,7 @@ export async function getCategories(): Promise<Category[]> {
     categories.push({
       id: mainCat.id,
       name: mainCat.name,
-      icon: '', // 分类表没有 icon 字段，可以后续添加或从配置获取
+      icon: mainCat.icon,
       subCategories
     })
   }
@@ -470,37 +509,15 @@ export async function getRegions(): Promise<any[]> {
   return rootRegions
 }
 
-// 首页数据 - 从 products 表动态生成
+// 首页数据 - 从配置表读取组件配置，然后从 products 表动态生成
 export async function getHomePageData(): Promise<HomePageData> {
-  // 获取轮播图商品（带 tag 的商品）
-  const carouselProducts = await getPool().query(`
-    SELECT * FROM products 
-    WHERE tag IS NOT NULL AND tag != ''
-    ORDER BY create_time DESC
-    LIMIT 5
-  `)
-  
-  // 获取秒杀商品
-  const seckillProducts = await getPool().query(`
-    SELECT * FROM products 
-    WHERE tag = 'seckill' OR tag LIKE '%秒杀%'
-    ORDER BY create_time DESC
-    LIMIT 10
-  `)
-  
-  // 获取团购商品
-  const groupbuyProducts = await getPool().query(`
-    SELECT * FROM products 
-    WHERE tag = 'groupbuy' OR tag LIKE '%团购%'
-    ORDER BY create_time DESC
-    LIMIT 10
-  `)
-  
-  // 获取猜你喜欢商品
-  const guessYouLikeProducts = await getPool().query(`
-    SELECT * FROM products 
-    ORDER BY create_time DESC
-    LIMIT 20
+  const pool = getPool()
+  // 从配置表获取启用的组件配置，按 sort_order 排序
+  const componentsConfig = await pool.query(`
+    SELECT id, type, title, config, sort_order
+    FROM homepage_components
+    WHERE is_enabled = TRUE
+    ORDER BY sort_order ASC, create_time ASC
   `)
   
   const mapProduct = (row: any): Product => ({
@@ -526,75 +543,144 @@ export async function getHomePageData(): Promise<HomePageData> {
   
   const components: PageComponent[] = []
   
-  // 轮播图组件
-  if (carouselProducts.rows.length > 0) {
-    components.push({
-      type: 'carousel',
-      id: 'carousel-1',
-      config: {
-        title: '热门推荐'
-      },
-      data: carouselProducts.rows.map((row: any) => ({
-        id: row.id,
-        image: row.image,
-        title: row.name,
-        link: `/product/${row.id}`
-      }))
-    })
-  }
-  
-  // 秒杀组件
-  if (seckillProducts.rows.length > 0) {
-    components.push({
-      type: 'seckill',
-      id: 'seckill-1',
-      config: {
-        title: '限时秒杀'
-      },
-      data: seckillProducts.rows.map(mapProduct)
-    })
-  }
-  
-  // 团购组件
-  if (groupbuyProducts.rows.length > 0) {
-    components.push({
-      type: 'groupbuy',
-      id: 'groupbuy-1',
-      config: {
-        title: '团购优惠'
-      },
-      data: groupbuyProducts.rows.map(mapProduct)
-    })
-  }
-  
-  // 商品列表组件
-  const allProducts = await getPool().query(`
-    SELECT * FROM products 
-    ORDER BY create_time DESC
-    LIMIT 20
-  `)
-  
-  if (allProducts.rows.length > 0) {
-    components.push({
-      type: 'productList',
-      id: 'product-list-1',
-      config: {
-        title: '精选商品'
-      },
-      data: allProducts.rows.map(mapProduct)
-    })
-  }
-  
-  // 猜你喜欢组件
-  if (guessYouLikeProducts.rows.length > 0) {
-    components.push({
-      type: 'guessYouLike',
-      id: 'guess-you-like-1',
-      config: {
-        title: '猜你喜欢'
-      },
-      data: guessYouLikeProducts.rows.map(mapProduct)
-    })
+  // 遍历配置，为每个组件查询商品数据
+  for (const config of componentsConfig.rows) {
+    const componentConfig = config.config ? JSON.parse(config.config) : {}
+    const componentType = config.type
+    const componentId = config.id
+    const componentTitle = config.title || ''
+    
+    let productsQuery = ''
+    let queryParams: any[] = []
+    
+    // 根据组件类型和配置生成查询
+    switch (componentType) {
+      case 'carousel':
+        // 轮播图：根据 tag 查询
+        const carouselTag = componentConfig.tag || ''
+        const carouselLimit = componentConfig.limit || 5
+        if (carouselTag) {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE tag = $1
+            ORDER BY create_time DESC
+            LIMIT $2
+          `
+          queryParams = [carouselTag, carouselLimit]
+        } else {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE tag IS NOT NULL AND tag != ''
+            ORDER BY create_time DESC
+            LIMIT $1
+          `
+          queryParams = [carouselLimit]
+        }
+        break
+        
+      case 'seckill':
+        // 秒杀：查询 tag 包含 'seckill' 或 '秒杀' 的商品
+        const seckillLimit = componentConfig.limit || 10
+        productsQuery = `
+          SELECT * FROM products 
+          WHERE tag = 'seckill' OR tag LIKE '%秒杀%'
+          ORDER BY create_time DESC
+          LIMIT $1
+        `
+        queryParams = [seckillLimit]
+        break
+        
+      case 'groupbuy':
+        // 团购：查询 tag 包含 'groupbuy' 或 '团购' 的商品
+        const groupbuyLimit = componentConfig.limit || 10
+        productsQuery = `
+          SELECT * FROM products 
+          WHERE tag = 'groupbuy' OR tag LIKE '%团购%'
+          ORDER BY create_time DESC
+          LIMIT $1
+        `
+        queryParams = [groupbuyLimit]
+        break
+        
+      case 'productList':
+        // 商品列表：根据分类或标签查询
+        const productListLimit = componentConfig.limit || 20
+        const productListCategory = componentConfig.category
+        const productListTag = componentConfig.tag
+        
+        if (productListCategory) {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE category = $1
+            ORDER BY create_time DESC
+            LIMIT $2
+          `
+          queryParams = [productListCategory, productListLimit]
+        } else if (productListTag) {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE tag = $1
+            ORDER BY create_time DESC
+            LIMIT $2
+          `
+          queryParams = [productListTag, productListLimit]
+        } else {
+          productsQuery = `
+            SELECT * FROM products 
+            ORDER BY create_time DESC
+            LIMIT $1
+          `
+          queryParams = [productListLimit]
+        }
+        break
+        
+      case 'guessYouLike':
+        // 猜你喜欢：随机或按时间排序
+        const guessLimit = componentConfig.limit || 20
+        productsQuery = `
+          SELECT * FROM products 
+          ORDER BY create_time DESC
+          LIMIT $1
+        `
+        queryParams = [guessLimit]
+        break
+        
+      default:
+        console.warn(`未知的组件类型: ${componentType}`)
+        continue
+    }
+    
+    // 执行查询
+    const productsResult = await pool.query(productsQuery, queryParams)
+    
+    if (productsResult.rows.length > 0) {
+      // 根据组件类型构建数据
+      if (componentType === 'carousel') {
+        components.push({
+          type: 'carousel',
+          id: componentId,
+          config: {
+            title: componentTitle
+          },
+          data: productsResult.rows.map((row: any) => ({
+            id: row.id,
+            image: row.image,
+            title: row.name,
+            link: `/product/${row.id}`
+          }))
+        })
+      } else {
+        components.push({
+          type: componentType as any,
+          id: componentId,
+          config: {
+            title: componentTitle,
+            ...componentConfig
+          },
+          data: productsResult.rows.map(mapProduct)
+        })
+      }
+    }
   }
   
   return { components }
