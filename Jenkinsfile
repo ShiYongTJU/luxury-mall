@@ -270,53 +270,11 @@ pipeline {
                         script {
                             // 创建 .env 文件（仅生产环境需要）
                             if (deployEnv == 'production') {
-                                // Groovy 层面的调试信息（注意：credentials 值会被 Jenkins 自动屏蔽）
-                                echo "=== Groovy 调试信息 ==="
-                                echo "JWT_SECRET 类型: ${JWT_SECRET.getClass().getName()}"
-                                echo "JWT_SECRET 长度: ${JWT_SECRET.length()}"
-                                echo "JWT_SECRET 是否以冒号开头: ${JWT_SECRET.startsWith(':')}"
-                                
-                                echo "DB_PASSWORD 类型: ${DB_PASSWORD.getClass().getName()}"
-                                echo "DB_PASSWORD 长度: ${DB_PASSWORD.length()}"
-                                echo "DB_PASSWORD 是否以冒号开头: ${DB_PASSWORD.startsWith(':')}"
-                                echo "=== Groovy 调试信息结束 ==="
-                                echo ""
-                                
                                 sh """
                                     echo "创建 .env 文件..."
-                                    
-                                    # 调试信息：打印原始凭据的调试信息
-                                    # 注意：Jenkins 会自动屏蔽敏感值，但我们可以查看元信息
-                                    echo "=== 调试信息：凭据处理（Shell 层面）==="
-                                    echo "原始 JWT_SECRET 长度: \$(echo -n "${JWT_SECRET}" | wc -c)"
-                                    echo "原始 JWT_SECRET 是否有冒号前缀: \$(echo -n "${JWT_SECRET}" | head -c 1 | grep -q ':' && echo '是' || echo '否')"
-                                    echo "原始 JWT_SECRET 第一个字符的 ASCII 码: \$(echo -n "${JWT_SECRET}" | head -c 1 | od -An -tu1 | tr -d ' ')"
-                                    
-                                    echo ""
-                                    echo "原始 DB_PASSWORD 长度: \$(echo -n "${DB_PASSWORD}" | wc -c)"
-                                    echo "原始 DB_PASSWORD 是否有冒号前缀: \$(echo -n "${DB_PASSWORD}" | head -c 1 | grep -q ':' && echo '是' || echo '否')"
-                                    echo "原始 DB_PASSWORD 第一个字符的 ASCII 码: \$(echo -n "${DB_PASSWORD}" | head -c 1 | od -An -tu1 | tr -d ' ')"
-                                    
-                                    # 处理密码格式（去掉可能的冒号前缀）
-                                    # Jenkins 凭据可能返回格式为 ":password" 的值
-                                    JWT_SECRET_CLEAN=\$(echo "${JWT_SECRET}" | sed 's/^://')
-                                    DB_PASSWORD_CLEAN=\$(echo "${DB_PASSWORD}" | sed 's/^://')
-                                    
-                                    # 调试信息：打印清理后的值
-                                    echo ""
-                                    echo "清理后 JWT_SECRET_CLEAN 长度: \$(echo "\$JWT_SECRET_CLEAN" | wc -c)"
-                                    echo "清理后 JWT_SECRET_CLEAN 是否有冒号前缀: \$(echo "\$JWT_SECRET_CLEAN" | grep -q '^:' && echo '是' || echo '否')"
-                                    echo "清理后 JWT_SECRET_CLEAN 前10个字符: \$(echo "\$JWT_SECRET_CLEAN" | head -c 10)..."
-                                    
-                                    echo "清理后 DB_PASSWORD_CLEAN 长度: \$(echo "\$DB_PASSWORD_CLEAN" | wc -c)"
-                                    echo "清理后 DB_PASSWORD_CLEAN 是否有冒号前缀: \$(echo "\$DB_PASSWORD_CLEAN" | grep -q '^:' && echo '是' || echo '否')"
-                                    echo "清理后 DB_PASSWORD_CLEAN 前10个字符: \$(echo "\$DB_PASSWORD_CLEAN" | head -c 10)..."
-                                    echo "=== 调试信息结束 ==="
-                                    echo ""
-                                    
                                     cat > .env << EOF
-JWT_SECRET=\${JWT_SECRET_CLEAN}
-DB_PASSWORD=\${DB_PASSWORD_CLEAN}
+JWT_SECRET=${JWT_SECRET}
+DB_PASSWORD=${DB_PASSWORD}
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_HOST=${DB_HOST}
@@ -332,36 +290,6 @@ EOF
                                     echo "✓ .env 文件已创建"
                                     echo "验证 .env 文件内容（隐藏敏感信息）:"
                                     cat .env | grep -v PASSWORD | grep -v SECRET
-                                    
-                                    # 调试信息：验证实际写入的值
-                                    echo ""
-                                    echo "=== 调试信息：.env 文件内容验证 ==="
-                                    if [ -f .env ]; then
-                                        echo ".env 文件中 JWT_SECRET 长度: \$(grep '^JWT_SECRET=' .env | cut -d'=' -f2 | wc -c)"
-                                        echo ".env 文件中 JWT_SECRET 是否有冒号前缀: \$(grep '^JWT_SECRET=:' .env >/dev/null && echo '是' || echo '否')"
-                                        echo ".env 文件中 JWT_SECRET 前10个字符: \$(grep '^JWT_SECRET=' .env | cut -d'=' -f2 | head -c 10)..."
-                                        
-                                        echo ".env 文件中 DB_PASSWORD 长度: \$(grep '^DB_PASSWORD=' .env | cut -d'=' -f2 | wc -c)"
-                                        echo ".env 文件中 DB_PASSWORD 是否有冒号前缀: \$(grep '^DB_PASSWORD=:' .env >/dev/null && echo '是' || echo '否')"
-                                        echo ".env 文件中 DB_PASSWORD 前10个字符: \$(grep '^DB_PASSWORD=' .env | cut -d'=' -f2 | head -c 10)..."
-                                    else
-                                        echo ".env 文件不存在！"
-                                    fi
-                                    echo "=== 调试信息结束 ==="
-                                    echo ""
-                                    
-                                    # 验证密码格式（检查是否还有冒号前缀）
-                                    if grep -q "^JWT_SECRET=:" .env || grep -q "^DB_PASSWORD=:" .env; then
-                                        echo "⚠ 警告: 检测到密码仍有冒号前缀，正在修复..."
-                                        sed -i 's/^JWT_SECRET=:/JWT_SECRET=/' .env
-                                        sed -i 's/^DB_PASSWORD=:/DB_PASSWORD=/' .env
-                                        echo "✓ 密码格式已修复"
-                                        
-                                        # 修复后再次验证
-                                        echo "修复后验证:"
-                                        echo "  JWT_SECRET 是否有冒号: \$(grep '^JWT_SECRET=:' .env >/dev/null && echo '是' || echo '否')"
-                                        echo "  DB_PASSWORD 是否有冒号: \$(grep '^DB_PASSWORD=:' .env >/dev/null && echo '是' || echo '否')"
-                                    fi
                                     
                                     # 设置正确的文件权限（仅所有者可读写）
                                     chmod 600 .env
@@ -419,33 +347,6 @@ EOF
                                 
                                 echo "检查服务状态..."
                                 docker-compose ${composeFiles} ps
-                                
-                                # 验证环境变量（检查密码格式，仅生产环境）
-                                if [ "${deployEnv}" = "production" ]; then
-                                    echo ""
-                                    echo "验证环境变量格式..."
-                                    if docker ps | grep -q luxury-mall-backend; then
-                                        DB_PASS=\$(docker exec luxury-mall-backend printenv DB_PASSWORD 2>/dev/null || echo "")
-                                        if [ -n "\$DB_PASS" ]; then
-                                            if [[ "\$DB_PASS" == :* ]]; then
-                                                echo "⚠ 警告: 后端密码仍有冒号前缀: \${DB_PASS:0:20}..."
-                                            else
-                                                echo "✓ 后端密码格式正确"
-                                            fi
-                                        fi
-                                    fi
-                                    
-                                    if docker ps | grep -q luxury-mall-postgres; then
-                                        PG_PASS=\$(docker exec luxury-mall-postgres printenv POSTGRES_PASSWORD 2>/dev/null || echo "")
-                                        if [ -n "\$PG_PASS" ]; then
-                                            if [[ "\$PG_PASS" == :* ]]; then
-                                                echo "⚠ 警告: 数据库密码仍有冒号前缀: \${PG_PASS:0:20}..."
-                                            else
-                                                echo "✓ 数据库密码格式正确"
-                                            fi
-                                        fi
-                                    fi
-                                fi
                             """
                         }
                     }
