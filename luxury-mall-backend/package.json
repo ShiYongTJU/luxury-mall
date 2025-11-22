@@ -9,7 +9,8 @@
     "start": "node dist/app.js",
     "type-check": "tsc --noEmit",
     "migrate": "tsx src/scripts/importMockData.ts",
-    "migrate-to-db": "node dist/scripts/migrate-to-db.js"
+    "migrate-to-db": "node dist/scripts/migrate-to-db.js",
+    "normalize-tags": "ts-node src/scripts/normalize-product-tags.ts"
   },
   "keywords": [
     "express",

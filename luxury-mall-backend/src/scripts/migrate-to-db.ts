@@ -382,7 +382,7 @@ async function migrateHomepageComponents(pool: Pool) {
       id: 'seckill-1',
       type: 'seckill',
       title: '限时秒杀',
-      config: { limit: 10 },
+      config: { limit: 10 }, // 使用统一后的标准 tag: 'seckill'
       sort_order: 2,
       is_enabled: true
     },

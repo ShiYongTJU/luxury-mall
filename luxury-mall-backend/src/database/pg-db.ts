@@ -422,13 +422,45 @@ export async function getCategories(): Promise<Category[]> {
     
     for (const subCat of subCategoriesResult.rows) {
       // 获取该子分类下的商品
-      // 注意：商品表中的 category 存储的是分类的 code，sub_category 存储的是子分类的 name
+      // 注意：商品表中的 category 存储的是分类的 code/id，sub_category 存储的是子分类的 name
+      // 匹配策略：
+      // 1. 精确匹配：sub_category = 子分类的 name（如 "手袋新品"）
+      // 2. 关键词匹配：如果子分类 name 包含关键词（如 "新品"），匹配 subCategory = "新品" 的商品
+      // 3. 主分类匹配：category = 主分类的 code（如 "new" 或 "bags"）
+      
+      // 构建查询条件
+      const conditions: string[] = []
+      const params: any[] = []
+      let paramIndex = 1
+      
+      // 精确匹配子分类名称
+      conditions.push(`sub_category = $${paramIndex++}`)
+      params.push(subCat.name)
+      
+      // 关键词匹配：提取子分类 name 中的关键词
+      // 例如："手袋新品" -> 匹配 subCategory = "新品" 的商品
+      //      "2025新款系列手袋" -> 匹配 subCategory = "新品" 或 "手袋" 的商品
+      const keywords = ['新品', '手袋', '系列', '新款']
+      for (const keyword of keywords) {
+        if (subCat.name.includes(keyword)) {
+          conditions.push(`sub_category = $${paramIndex++}`)
+          params.push(keyword)
+        }
+      }
+      
+      // 匹配主分类 code
+      conditions.push(`category = $${paramIndex++}`)
+      params.push(mainCat.code)
+      
+      // 添加 limit
+      params.push(productsLimit)
+      
       const productsResult = await pool.query(`
-        SELECT * FROM products
-        WHERE sub_category = $1 OR category = $2
+        SELECT DISTINCT * FROM products
+        WHERE (${conditions.join(' OR ')})
         ORDER BY create_time DESC
-        LIMIT $3
-      `, [subCat.name, mainCat.code, productsLimit])
+        LIMIT $${paramIndex}
+      `, params)
       
       const products = productsResult.rows.map((row: any) => ({
         id: row.id,
@@ -579,27 +611,49 @@ export async function getHomePageData(): Promise<HomePageData> {
         break
         
       case 'seckill':
-        // 秒杀：查询 tag 包含 'seckill' 或 '秒杀' 的商品
+        // 秒杀：查询 tag = 'seckill' 的商品（统一后的标准 tag）
         const seckillLimit = componentConfig.limit || 10
-        productsQuery = `
-          SELECT * FROM products 
-          WHERE tag = 'seckill' OR tag LIKE '%秒杀%'
-          ORDER BY create_time DESC
-          LIMIT $1
-        `
-        queryParams = [seckillLimit]
+        const seckillTag = componentConfig.tag // 允许通过配置指定 tag
+        if (seckillTag) {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE tag = $1
+            ORDER BY create_time DESC
+            LIMIT $2
+          `
+          queryParams = [seckillTag, seckillLimit]
+        } else {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE tag = 'seckill'
+            ORDER BY create_time DESC
+            LIMIT $1
+          `
+          queryParams = [seckillLimit]
+        }
         break
         
       case 'groupbuy':
-        // 团购：查询 tag 包含 'groupbuy' 或 '团购' 的商品
+        // 团购：查询 tag = 'groupbuy' 的商品（统一后的标准 tag）
         const groupbuyLimit = componentConfig.limit || 10
-        productsQuery = `
-          SELECT * FROM products 
-          WHERE tag = 'groupbuy' OR tag LIKE '%团购%'
-          ORDER BY create_time DESC
-          LIMIT $1
-        `
-        queryParams = [groupbuyLimit]
+        const groupbuyTag = componentConfig.tag // 允许通过配置指定 tag
+        if (groupbuyTag) {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE tag = $1
+            ORDER BY create_time DESC
+            LIMIT $2
+          `
+          queryParams = [groupbuyTag, groupbuyLimit]
+        } else {
+          productsQuery = `
+            SELECT * FROM products 
+            WHERE tag = 'groupbuy'
+            ORDER BY create_time DESC
+            LIMIT $1
+          `
+          queryParams = [groupbuyLimit]
+        }
         break
         
       case 'productList':
@@ -653,33 +707,38 @@ export async function getHomePageData(): Promise<HomePageData> {
     // 执行查询
     const productsResult = await pool.query(productsQuery, queryParams)
     
-    if (productsResult.rows.length > 0) {
-      // 根据组件类型构建数据
-      if (componentType === 'carousel') {
-        components.push({
-          type: 'carousel',
-          id: componentId,
-          config: {
-            title: componentTitle
-          },
-          data: productsResult.rows.map((row: any) => ({
-            id: row.id,
-            image: row.image,
-            title: row.name,
-            link: `/product/${row.id}`
-          }))
-        })
-      } else {
-        components.push({
-          type: componentType as any,
-          id: componentId,
-          config: {
-            title: componentTitle,
-            ...componentConfig
-          },
-          data: productsResult.rows.map(mapProduct)
-        })
-      }
+    // 即使没有商品，也返回组件（前端可以显示空状态）
+    // 但为了兼容性，如果查询结果为空，记录警告并跳过
+    if (productsResult.rows.length === 0) {
+      console.warn(`组件 ${componentId} (${componentType}) 查询不到商品数据，跳过该组件`)
+      continue
+    }
+    
+    // 根据组件类型构建数据
+    if (componentType === 'carousel') {
+      components.push({
+        type: 'carousel',
+        id: componentId,
+        config: {
+          title: componentTitle
+        },
+        data: productsResult.rows.map((row: any) => ({
+          id: row.id,
+          image: row.image,
+          title: row.name,
+          link: `/product/${row.id}`
+        }))
+      })
+    } else {
+      components.push({
+        type: componentType as any,
+        id: componentId,
+        config: {
+          title: componentTitle,
+          ...componentConfig
+        },
+        data: productsResult.rows.map(mapProduct)
+      })
     }
   }
   
