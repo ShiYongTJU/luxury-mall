@@ -262,9 +262,15 @@ pipeline {
                             if (deployEnv == 'production') {
                                 sh """
                                     echo "创建 .env 文件..."
-                                    cat > .env << 'EOF'
-JWT_SECRET=${JWT_SECRET}
-DB_PASSWORD=${DB_PASSWORD}
+                                    
+                                    # 处理密码格式（去掉可能的冒号前缀）
+                                    # Jenkins 凭据可能返回格式为 ":password" 的值
+                                    JWT_SECRET_CLEAN=\$(echo "${JWT_SECRET}" | sed 's/^://')
+                                    DB_PASSWORD_CLEAN=\$(echo "${DB_PASSWORD}" | sed 's/^://')
+                                    
+                                    cat > .env << EOF
+JWT_SECRET=\${JWT_SECRET_CLEAN}
+DB_PASSWORD=\${DB_PASSWORD_CLEAN}
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_HOST=${DB_HOST}
@@ -280,6 +286,14 @@ EOF
                                     echo "✓ .env 文件已创建"
                                     echo "验证 .env 文件内容（隐藏敏感信息）:"
                                     cat .env | grep -v PASSWORD | grep -v SECRET
+                                    
+                                    # 验证密码格式（检查是否还有冒号前缀）
+                                    if grep -q "^JWT_SECRET=:" .env || grep -q "^DB_PASSWORD=:" .env; then
+                                        echo "⚠ 警告: 检测到密码仍有冒号前缀，正在修复..."
+                                        sed -i 's/^JWT_SECRET=:/JWT_SECRET=/' .env
+                                        sed -i 's/^DB_PASSWORD=:/DB_PASSWORD=/' .env
+                                        echo "✓ 密码格式已修复"
+                                    fi
                                     
                                     # 设置正确的文件权限（仅所有者可读写）
                                     chmod 600 .env
