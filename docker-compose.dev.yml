@@ -5,17 +5,28 @@ version: '3.8'
 
 services:
   backend:
-    # 移除对 PostgreSQL 的依赖（使用空数组）
+    # 在开发环境中，backend 不依赖 postgres
+    # 注意：Docker Compose 合并时，depends_on 的覆盖可能不完全生效
+    # 因此我们在下面定义 postgres 服务以满足依赖检查
     depends_on: []
     environment:
       - USE_DATABASE=false
       - NODE_ENV=development
 
-  # 定义 postgres 服务但使用 profiles 禁用（满足依赖检查但不启动）
+  # 定义 postgres 服务以满足依赖检查
+  # 使用 alpine 镜像运行一个简单的命令，不实际启动数据库
   postgres:
-    image: postgres:15-alpine
+    image: alpine:latest
     container_name: luxury-mall-postgres
-    profiles:
-      - dont-start
-    # 不定义其他配置，因为不会启动
+    command: sh -c "echo 'PostgreSQL not needed in dev mode' && sleep 3600"
+    networks:
+      - luxury-mall-network
+    # 定义健康检查，立即返回成功（满足 depends_on 的 condition 要求）
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 1
+      start_period: 0s
+    restart: "no"
 
