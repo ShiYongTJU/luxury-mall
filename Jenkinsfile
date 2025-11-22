@@ -525,23 +525,55 @@ EOF
                     
                     dir("${PROJECT_DIR}") {
                         script {
-                            def composeFiles = DEPLOY_ENV == 'production' ? 
+                            // 使用与部署阶段相同的环境判断逻辑
+                            def deployEnv = params.DEPLOY_ENV_OVERRIDE == 'auto' ? 
+                                DEPLOY_ENV : params.DEPLOY_ENV_OVERRIDE
+                            
+                            def composeFiles = deployEnv == 'production' ? 
                                 '-f docker-compose.yml -f docker-compose.prod.yml' :
                                 '-f docker-compose.yml -f docker-compose.dev.yml'
+                            
+                            echo "健康检查环境: ${deployEnv}"
+                            echo "使用配置文件: ${composeFiles}"
                             
                             // 检查后端服务
                             sh """
                                 echo "检查后端服务 (http://localhost:3001/health)..."
+                                
+                                # 先检查容器是否在运行
+                                echo "检查后端容器状态..."
+                                docker-compose ${composeFiles} ps backend || true
+                                
+                                # 等待后端服务启动
                                 for i in \$(seq 1 30); do
+                                    # 尝试从宿主机访问
                                     if curl -f http://localhost:3001/health > /dev/null 2>&1; then
                                         echo "✓ 后端服务健康检查通过"
+                                        curl -s http://localhost:3001/health | head -5
                                         break
                                     fi
+                                    
+                                    # 如果达到最大重试次数
                                     if [ \$i -eq 30 ]; then
                                         echo "✗ 后端服务健康检查失败（30次重试后）"
-                                        docker-compose ${composeFiles} logs backend | tail -50
+                                        echo ""
+                                        echo "=== 后端容器状态 ==="
+                                        docker-compose ${composeFiles} ps backend || true
+                                        echo ""
+                                        echo "=== 后端容器日志（最后50行）==="
+                                        docker-compose ${composeFiles} logs --tail=50 backend || true
+                                        echo ""
+                                        echo "=== 尝试从容器内访问健康检查端点 ==="
+                                        docker-compose ${composeFiles} exec -T backend wget -qO- http://localhost:3001/health 2>&1 || echo "容器内访问失败"
+                                        echo ""
+                                        echo "=== 检查后端容器端口映射 ==="
+                                        docker-compose ${composeFiles} port backend 3001 || true
+                                        echo ""
+                                        echo "=== 检查后端进程 ==="
+                                        docker-compose ${composeFiles} exec -T backend ps aux | grep node || true
                                         exit 1
                                     fi
+                                    
                                     echo "  等待后端服务启动... (\$i/30)"
                                     sleep 2
                                 done
@@ -550,29 +582,52 @@ EOF
                             // 检查前端服务
                             sh """
                                 echo "检查前端服务 (http://localhost:80)..."
+                                
+                                # 先检查容器是否在运行
+                                echo "检查前端容器状态..."
+                                docker-compose ${composeFiles} ps frontend || true
+                                
+                                # 等待前端服务启动
                                 for i in \$(seq 1 30); do
+                                    # 尝试从宿主机访问
                                     if curl -f http://localhost:80 > /dev/null 2>&1; then
                                         echo "✓ 前端服务健康检查通过"
                                         break
                                     fi
+                                    
+                                    # 如果达到最大重试次数
                                     if [ \$i -eq 30 ]; then
                                         echo "✗ 前端服务健康检查失败（30次重试后）"
-                                        docker-compose ${composeFiles} logs frontend | tail -50
+                                        echo ""
+                                        echo "=== 前端容器状态 ==="
+                                        docker-compose ${composeFiles} ps frontend || true
+                                        echo ""
+                                        echo "=== 前端容器日志（最后50行）==="
+                                        docker-compose ${composeFiles} logs --tail=50 frontend || true
+                                        echo ""
+                                        echo "=== 检查前端容器端口映射 ==="
+                                        docker-compose ${composeFiles} port frontend 80 || true
+                                        echo ""
+                                        echo "=== 检查前端 Nginx 进程 ==="
+                                        docker-compose ${composeFiles} exec -T frontend ps aux | grep nginx || true
                                         exit 1
                                     fi
+                                    
                                     echo "  等待前端服务启动... (\$i/30)"
                                     sleep 2
                                 done
                             """
                             
                             // 如果是生产环境且使用数据库，检查数据库连接
-                            if (DEPLOY_ENV == 'production') {
+                            if (deployEnv == 'production') {
                                 sh """
                                     echo "检查数据库连接..."
                                     if docker-compose ${composeFiles} exec -T postgres psql -U \${DB_USER:-postgres} -d \${DB_NAME:-luxury_mall} -c "SELECT 1;" > /dev/null 2>&1; then
                                         echo "✓ 数据库连接正常"
                                     else
                                         echo "⚠ 数据库连接检查失败（可能不影响服务）"
+                                        echo "查看数据库容器状态:"
+                                        docker-compose ${composeFiles} ps postgres || true
                                     fi
                                 """
                             }
