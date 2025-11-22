@@ -6,5 +6,13 @@
     "password": "$2b$10$EXkNui6e4aJckMolYB/xcuBTRrI1.uSm3sut4VA1gM2jpfyNFqLpi",
     "createTime": "2025-11-21T15:33:03.625Z",
     "updateTime": "2025-11-21T15:33:03.625Z"
+  },
+  {
+    "id": "user-1763821757694-x62v2ocdy",
+    "username": "siki",
+    "phone": "18888888888",
+    "password": "$2b$10$44hHDVNlclC.fgb6KlyQW.biOaU7C76cWCCkE3AGZBU3Xbs/nCA0K",
+    "createTime": "2025-11-22T14:29:17.694Z",
+    "updateTime": "2025-11-22T14:29:17.694Z"
   }
 ]

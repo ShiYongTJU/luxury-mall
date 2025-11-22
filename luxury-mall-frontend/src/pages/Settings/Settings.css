@@ -1,23 +1,25 @@
 .settings {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 /* 编辑地址页面时，整个页面背景设为白色 */
 .settings:has(.address-form) {
-  background: #ffffff;
+  background: var(--bg-secondary);
 }
 
 .settings-header {
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 12px;
   position: sticky;
   top: 0;
   z-index: 100;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .settings-back-btn {
@@ -26,20 +28,22 @@
   border: none;
   background: transparent;
   font-size: 24px;
-  color: #333;
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  transition: color 0.3s ease;
 }
 
 .settings-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin: 0;
   flex: 1;
+  transition: color 0.3s ease;
 }
 
 .settings-add-btn {
@@ -64,18 +68,20 @@
 }
 
 .settings-section {
-  background: #ffffff;
+  background: var(--bg-secondary);
   margin-bottom: 12px;
-  border-top: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .settings-section-title {
   padding: 16px;
   font-size: 14px;
-  color: #999;
+  color: var(--text-tertiary);
   font-weight: 500;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--border-color-light);
+  transition: color 0.3s ease, border-color 0.3s ease;
 }
 
 .settings-menu {
@@ -89,8 +95,8 @@
   justify-content: space-between;
   padding: 16px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  border-bottom: 1px solid #f5f5f5;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  border-bottom: 1px solid var(--border-color-light);
 }
 
 .settings-menu-item:last-child {
@@ -98,7 +104,7 @@
 }
 
 .settings-menu-item:hover {
-  background-color: #fafafa;
+  background-color: var(--hover-bg);
 }
 
 .settings-menu-item-left {
@@ -122,17 +128,52 @@
 
 .settings-menu-text {
   font-size: 16px;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .settings-menu-value {
   font-size: 14px;
-  color: #999;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
 }
 
 .settings-menu-arrow {
   font-size: 20px;
-  color: #999;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
+}
+
+/* 深色模式切换开关 */
+.theme-switch {
+  width: 48px;
+  height: 24px;
+  background: var(--border-color-dark);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-right: 8px;
+}
+
+.dark .theme-switch {
+  background: #4a9eff;
+}
+
+.theme-switch-slider {
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-switch-slider-dark {
+  transform: translateX(24px);
 }
 
 /* 地址管理样式 */
@@ -144,10 +185,11 @@
 }
 
 .address-item {
-  background: #ffffff;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 16px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .address-item-header {
@@ -164,12 +206,14 @@
 .address-item-name {
   font-size: 16px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .address-item-phone {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .address-item-default {
@@ -190,23 +234,25 @@
 
 .address-item-detail {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 12px;
+  transition: color 0.3s ease;
 }
 
 .address-item-actions {
   display: flex;
   gap: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f5f5f5;
+  border-top: 1px solid var(--border-color-light);
+  transition: border-color 0.3s ease;
 }
 
 .address-action-btn {
   padding: 6px 16px;
-  background: #ffffff;
-  color: #666;
-  border: 1px solid #e8e8e8;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color-dark);
   border-radius: 4px;
   font-size: 14px;
   cursor: pointer;
@@ -239,8 +285,9 @@
 
 .address-empty-text {
   font-size: 14px;
-  color: #999;
+  color: var(--text-tertiary);
   margin-bottom: 24px;
+  transition: color 0.3s ease;
 }
 
 .address-empty-btn {
@@ -259,7 +306,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #ffffff;
+  background: var(--bg-secondary);
+  transition: background-color 0.3s ease;
 }
 
 .address-form-group {
@@ -270,8 +318,9 @@
 
 .address-form-group label {
   font-size: 14px;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .address-form-required {
@@ -282,9 +331,11 @@
 .address-form-group input[type="text"],
 .address-form-group input[type="tel"] {
   padding: 12px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--border-color-dark);
   border-radius: 6px;
   font-size: 14px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   transition: all 0.3s ease;
 }
 
@@ -302,11 +353,11 @@
 
 .address-form-select {
   padding: 12px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--border-color-dark);
   border-radius: 6px;
   font-size: 14px;
-  background-color: #ffffff;
-  color: #333;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.3s ease;
   flex: 1;
@@ -319,8 +370,8 @@
 }
 
 .address-form-select:disabled {
-  background-color: #f5f5f5;
-  color: #999;
+  background-color: var(--bg-tertiary);
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
@@ -342,7 +393,8 @@
   gap: 12px;
   margin-top: 8px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .address-form-cancel-btn,
@@ -358,8 +410,9 @@
 }
 
 .address-form-cancel-btn {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .address-form-cancel-btn:hover {

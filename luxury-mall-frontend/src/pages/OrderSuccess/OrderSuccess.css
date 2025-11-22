@@ -1,19 +1,21 @@
 .order-success {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
+  transition: background-color 0.3s ease;
 }
 
 .order-success-content {
-  background: #ffffff;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 60px 40px;
   text-align: center;
   max-width: 500px;
   width: 100%;
+  transition: background-color 0.3s ease;
 }
 
 .order-success-icon {
@@ -33,21 +35,24 @@
 .order-success-title {
   font-size: 24px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 16px;
+  transition: color 0.3s ease;
 }
 
 .order-success-order-no {
   font-size: 16px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 8px;
+  transition: color 0.3s ease;
 }
 
 .order-success-message {
   font-size: 14px;
-  color: #999;
+  color: var(--text-tertiary);
   margin-bottom: 32px;
   line-height: 1.6;
+  transition: color 0.3s ease;
 }
 
 .order-success-actions {
@@ -58,9 +63,9 @@
 
 .order-success-btn {
   padding: 12px 32px;
-  border: 1px solid #e8e8e8;
-  background: #ffffff;
-  color: #666;
+  border: 1px solid var(--border-color-dark);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   border-radius: 24px;
   font-size: 14px;
   font-weight: 500;

@@ -1,7 +1,8 @@
 .groupbuy-container {
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px;
   margin-bottom: 12px;
+  transition: background-color 0.3s ease;
 }
 
 .groupbuy-header {
@@ -14,8 +15,9 @@
 .groupbuy-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   letter-spacing: -0.5px;
+  transition: color 0.3s ease;
 }
 
 .groupbuy-badge {

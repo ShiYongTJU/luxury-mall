@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '@/context/UserContext'
+import { useTheme } from '@/context/ThemeContext'
 import { toast } from '@/components/basic/Toast/Toast'
 import AddressManagement from './AddressManagement'
 import './Settings.css'
@@ -8,6 +9,7 @@ import './Settings.css'
 const Settings = () => {
   const navigate = useNavigate()
   const { isAuthenticated, loading: userLoading } = useUser()
+  const { theme, toggleTheme, isDark } = useTheme()
   const [activeSection, setActiveSection] = useState<'main' | 'address'>('main')
   const hasCheckedAuth = useRef(false) // 防止重复检查登录状态
 
@@ -84,14 +86,16 @@ const Settings = () => {
               </div>
               <span className="settings-menu-arrow">›</span>
             </div>
-            <div className="settings-menu-item">
+            <div className="settings-menu-item" onClick={toggleTheme}>
               <div className="settings-menu-item-left">
-                <span className="settings-menu-icon">🌙</span>
+                <span className="settings-menu-icon">{isDark ? '🌙' : '☀️'}</span>
                 <span className="settings-menu-text">深色模式</span>
               </div>
               <div className="settings-menu-item-right">
-                <span className="settings-menu-value">浅色</span>
-                <span className="settings-menu-arrow">›</span>
+                <div className="theme-switch">
+                  <div className={`theme-switch-slider ${isDark ? 'theme-switch-slider-dark' : ''}`}></div>
+                </div>
+                <span className="settings-menu-value">{isDark ? '深色' : '浅色'}</span>
               </div>
             </div>
             <div className="settings-menu-item">

@@ -1,19 +1,22 @@
 .cart {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-primary);
   padding-bottom: 80px;
+  transition: background-color 0.3s ease;
 }
 
 .cart-header {
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .cart-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .cart-empty {
@@ -37,8 +40,9 @@
 
 .cart-empty-text {
   font-size: 16px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 32px;
+  transition: color 0.3s ease;
 }
 
 .cart-empty-btn {
@@ -65,10 +69,11 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 12px;
+  transition: background-color 0.3s ease;
 }
 
 .cart-item-image {
@@ -76,7 +81,8 @@
   height: 80px;
   object-fit: cover;
   border-radius: 8px;
-  background: #f5f5f5;
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 .cart-item-info {
@@ -93,14 +99,16 @@
 .cart-item-name {
   font-size: 16px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 8px;
+  transition: color 0.3s ease;
 }
 
 .cart-item-specs {
   font-size: 13px;
-  color: #888;
+  color: var(--text-secondary);
   margin-bottom: 8px;
+  transition: color 0.3s ease;
 }
 
 .cart-item-price {
@@ -118,8 +126,8 @@
 .cart-item-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #e8e8e8;
-  background: #ffffff;
+  border: 1px solid var(--border-color-dark);
+  background: var(--bg-secondary);
   border-radius: 6px;
   cursor: pointer;
   font-size: 18px;
@@ -127,10 +135,11 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  color: var(--text-primary);
 }
 
 .cart-item-btn:hover {
-  background: #f5f5f5;
+  background: var(--bg-tertiary);
   border-color: #e53e3e;
 }
 
@@ -174,8 +183,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background: #ffffff;
-  border-top: 1px solid #f0f0f0;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* PC端响应式布局：购物车底部栏宽度与内容区域保持一致 */
@@ -200,7 +210,8 @@
 
 .cart-total-label {
   font-size: 16px;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .cart-total-price {

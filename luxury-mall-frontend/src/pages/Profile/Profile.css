@@ -1,39 +1,44 @@
 .profile {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 .profile-header {
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .profile-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .profile-user-card {
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 20px 16px;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .profile-avatar {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: #f5f5f5;
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  transition: background-color 0.3s ease;
 }
 
 .avatar-placeholder {
@@ -54,7 +59,8 @@
 .profile-name {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .profile-level {
@@ -66,9 +72,14 @@
   border-radius: 12px;
 }
 
+.dark .profile-level {
+  background: rgba(229, 62, 62, 0.2);
+}
+
 .profile-desc {
   font-size: 14px;
-  color: #999;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
 }
 
 .profile-header-btn {
@@ -83,13 +94,14 @@
 }
 
 .profile-wallet {
-  background: #ffffff;
+  background: var(--bg-secondary);
   margin: 12px 0;
   padding: 20px 16px;
   display: flex;
   justify-content: space-around;
-  border-top: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .profile-wallet-item {
@@ -106,20 +118,23 @@
 
 .profile-wallet-label {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .profile-wallet-value {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .profile-stats {
   display: flex;
-  background: #ffffff;
-  border-bottom: 1px solid #f0f0f0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   padding: 16px 0;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .profile-stat-item {
@@ -129,8 +144,9 @@
   align-items: center;
   justify-content: center;
   padding: 12px 0;
-  border-right: 1px solid #f0f0f0;
+  border-right: 1px solid var(--border-color);
   cursor: pointer;
+  transition: border-color 0.3s ease;
 }
 
 .profile-stat-item:last-child {
@@ -140,13 +156,15 @@
 .stat-value {
   font-size: 20px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 6px;
+  transition: color 0.3s ease;
 }
 
 .stat-label {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .profile-menu {
@@ -154,10 +172,11 @@
 }
 
 .menu-section {
-  background: #ffffff;
+  background: var(--bg-secondary);
   margin-bottom: 12px;
-  border-top: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .menu-section-title {
@@ -165,21 +184,24 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--border-color-light);
+  transition: border-color 0.3s ease;
 }
 
 .menu-section-title-text {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .menu-section-title-link {
   font-size: 14px;
-  color: #999;
+  color: var(--text-tertiary);
   display: flex;
   align-items: center;
   gap: 4px;
+  transition: color 0.3s ease;
 }
 
 .menu-section-grid {
@@ -199,12 +221,14 @@
 
 .menu-section-icon {
   font-size: 24px;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .menu-section-label {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .menu-item {
@@ -212,9 +236,9 @@
   align-items: center;
   padding: 16px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  border-bottom: 1px solid #f5f5f5;
-  background: #ffffff;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  border-bottom: 1px solid var(--border-color-light);
+  background: var(--bg-secondary);
 }
 
 .menu-item:last-child {
@@ -222,7 +246,7 @@
 }
 
 .menu-item:active {
-  background-color: #fafafa;
+  background-color: var(--hover-bg);
 }
 
 .menu-icon {
@@ -238,10 +262,12 @@
 .menu-text {
   flex: 1;
   font-size: 16px;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .menu-arrow {
   font-size: 20px;
-  color: #999;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
 }

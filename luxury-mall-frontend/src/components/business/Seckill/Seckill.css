@@ -1,7 +1,8 @@
 .seckill-container {
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px;
   margin-bottom: 12px;
+  transition: background-color 0.3s ease;
 }
 
 .seckill-header {
@@ -19,8 +20,9 @@
 .seckill-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   letter-spacing: -0.5px;
+  transition: color 0.3s ease;
 }
 
 .seckill-countdown {
@@ -31,26 +33,29 @@
 
 .countdown-label {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   margin-right: 4px;
+  transition: color 0.3s ease;
 }
 
 .countdown-time {
   display: inline-block;
   min-width: 32px;
   padding: 6px 8px;
-  background: #f5f5f5;
-  color: #333;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 600;
   text-align: center;
   border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .countdown-separator {
-  color: #999;
+  color: var(--text-tertiary);
   font-size: 16px;
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .seckill-products {

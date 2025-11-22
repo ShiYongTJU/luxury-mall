@@ -1,19 +1,22 @@
 .checkout {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-primary);
   padding-bottom: 140px;
+  transition: background-color 0.3s ease;
 }
 
 .checkout-header {
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .checkout-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .checkout-content {
@@ -21,10 +24,11 @@
 }
 
 .checkout-section {
-  background: #ffffff;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 12px;
+  transition: background-color 0.3s ease;
 }
 
 .checkout-section-header {
@@ -37,8 +41,9 @@
 .checkout-section h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .checkout-add-address-btn {
@@ -65,7 +70,8 @@
 .checkout-empty-address {
   text-align: center;
   padding: 40px 20px;
-  color: #999;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
 }
 
 .checkout-address-item {
@@ -73,10 +79,11 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: 16px;
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  background: var(--bg-secondary);
 }
 
 .checkout-address-item:hover {
@@ -86,6 +93,10 @@
 .checkout-address-item.selected {
   border-color: #e53e3e;
   background: #fff5f5;
+}
+
+.dark .checkout-address-item.selected {
+  background: rgba(229, 62, 62, 0.2);
 }
 
 .checkout-address-info {
@@ -102,12 +113,14 @@
 .checkout-address-name {
   font-size: 16px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .checkout-address-phone {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .checkout-address-default {
@@ -120,16 +133,18 @@
 
 .checkout-address-tag {
   padding: 2px 8px;
-  background: #f0f0f0;
-  color: #666;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   border-radius: 4px;
   font-size: 12px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .checkout-address-detail {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
+  transition: color 0.3s ease;
 }
 
 .checkout-address-actions {
@@ -139,9 +154,9 @@
 
 .checkout-address-action-btn {
   padding: 4px 12px;
-  background: #ffffff;
-  color: #666;
-  border: 1px solid #e8e8e8;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color-dark);
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
@@ -167,8 +182,9 @@
 
 .checkout-form-group label {
   font-size: 14px;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .checkout-form-required {

@@ -23,13 +23,14 @@
 }
 
 .confirm-dialog {
-  background: #ffffff;
+  background: var(--bg-secondary);
   border-radius: 12px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px var(--shadow);
   animation: confirmSlideIn 0.3s ease-out;
   overflow: hidden;
+  transition: background-color 0.3s ease;
 }
 
 @keyframes confirmSlideIn {
@@ -50,9 +51,10 @@
 .confirm-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin: 0;
   text-align: center;
+  transition: color 0.3s ease;
 }
 
 .confirm-body {
@@ -80,17 +82,19 @@
 
 .confirm-message {
   font-size: 15px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
   word-break: break-word;
+  transition: color 0.3s ease;
 }
 
 .confirm-footer {
   display: flex;
   gap: 12px;
   padding: 16px 20px 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .confirm-btn {
@@ -105,13 +109,14 @@
 }
 
 .confirm-btn-cancel {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .confirm-btn-cancel:hover {
-  background: #e8e8e8;
-  color: #333;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .confirm-btn-confirm {

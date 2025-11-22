@@ -1,25 +1,28 @@
 .product-list-container {
   margin-bottom: 16px;
-  background: #ffffff;
+  background: var(--bg-secondary);
   padding: 16px 0;
+  transition: background-color 0.3s ease;
 }
 
 .product-list-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 12px;
   padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: color 0.3s ease;
 }
 
 .product-list-title::after {
   content: '更多 ›';
   font-size: 14px;
   font-weight: 400;
-  color: #999;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease;
 }
 
 .product-list {
