@@ -31,7 +31,7 @@ pipeline {
         DB_USER = 'postgres'
         DB_HOST = 'postgres'
         DB_PORT = '5432'
-        CORS_ORIGIN = 'http://your-domain.com'  // 请根据实际情况修改为你的域名或 IP
+        CORS_ORIGIN = 'http://1.15.93.186'  // 请根据实际情况修改为你的域名或 IP
     }
     
     // 选项配置
@@ -293,8 +293,8 @@ EOF
                             if (params.CLEAN_BUILD) {
                                 sh '''
                                     echo "清理旧的容器和镜像..."
-                                    docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
-                                    docker compose -f docker-compose.yml -f docker-compose.dev.yml down || true
+                                    docker-compose -f docker-compose.yml -f docker-compose.prod.yml down || true
+                                    docker-compose -f docker-compose.yml -f docker-compose.dev.yml down || true
                                     
                                     # 清理未使用的镜像（保留最近 3 个版本）
                                     docker image prune -f || true
@@ -313,13 +313,13 @@ EOF
                                 echo "启动服务..."
                                 
                                 # 使用最新构建的镜像启动服务
-                                docker compose ${composeFiles} up -d --build
+                                docker-compose ${composeFiles} up -d --build
                                 
                                 echo "等待服务启动..."
                                 sleep 20
                                 
                                 echo "检查服务状态..."
-                                docker compose ${composeFiles} ps
+                                docker-compose ${composeFiles} ps
                             """
                         }
                     }
@@ -351,7 +351,7 @@ EOF
                                     fi
                                     if [ \$i -eq 30 ]; then
                                         echo "✗ 后端服务健康检查失败（30次重试后）"
-                                        docker compose ${composeFiles} logs backend | tail -50
+                                        docker-compose ${composeFiles} logs backend | tail -50
                                         exit 1
                                     fi
                                     echo "  等待后端服务启动... (\$i/30)"
@@ -369,7 +369,7 @@ EOF
                                     fi
                                     if [ \$i -eq 30 ]; then
                                         echo "✗ 前端服务健康检查失败（30次重试后）"
-                                        docker compose ${composeFiles} logs frontend | tail -50
+                                        docker-compose ${composeFiles} logs frontend | tail -50
                                         exit 1
                                     fi
                                     echo "  等待前端服务启动... (\$i/30)"
@@ -407,7 +407,7 @@ EOF
                         script {
                             sh '''
                                 echo "执行数据库迁移..."
-                                docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+                                docker-compose -f docker-compose.yml -f docker-compose.prod.yml \
                                     exec -T backend npm run migrate-to-db || {
                                     echo "⚠ 数据库迁移失败或已是最新状态"
                                     echo "如果这是首次部署，请手动执行迁移"
