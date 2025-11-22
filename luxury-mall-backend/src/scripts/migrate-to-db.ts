@@ -56,8 +56,19 @@ async function migrateAddresses(pool: Pool) {
   const addresses = readJsonFile<any[]>(addressesFile)
   console.log(`开始迁移 ${addresses.length} 个地址...`)
 
+  let successCount = 0
+  let failCount = 0
+
   for (const addr of addresses) {
     try {
+      // 先检查用户是否存在
+      const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [addr.userId])
+      if (userCheck.rows.length === 0) {
+        console.warn(`跳过地址 ${addr.id}：用户 ${addr.userId} 不存在`)
+        failCount++
+        continue
+      }
+
       await pool.query(
         `INSERT INTO addresses (id, user_id, name, phone, province, city, district, detail, is_default, tag, create_time, update_time)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -75,13 +86,15 @@ async function migrateAddresses(pool: Pool) {
           addr.tag || null
         ]
       )
+      successCount++
     } catch (error: any) {
       if (error.code !== '23505') {
         console.error(`迁移地址 ${addr.id} 失败:`, error.message)
+        failCount++
       }
     }
   }
-  console.log('地址迁移完成')
+  console.log(`地址迁移完成（成功: ${successCount}, 失败: ${failCount}）`)
 }
 
 async function migrateProducts(pool: Pool) {
@@ -140,8 +153,19 @@ async function migrateOrders(pool: Pool) {
   const orders = readJsonFile<any[]>(ordersFile)
   console.log(`开始迁移 ${orders.length} 个订单...`)
 
+  let successCount = 0
+  let failCount = 0
+
   for (const order of orders) {
     try {
+      // 先检查用户是否存在
+      const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [order.userId])
+      if (userCheck.rows.length === 0) {
+        console.warn(`跳过订单 ${order.id}：用户 ${order.userId} 不存在`)
+        failCount++
+        continue
+      }
+
       // 插入订单
       await pool.query(
         `INSERT INTO orders (id, user_id, order_no, total_price, status, create_time, pay_time, ship_time, deliver_time)
@@ -164,49 +188,60 @@ async function migrateOrders(pool: Pool) {
       if (order.items && Array.isArray(order.items)) {
         for (let i = 0; i < order.items.length; i++) {
           const item = order.items[i]
-          await pool.query(
-            `INSERT INTO order_items (id, order_id, product_id, name, image, price, quantity, selected_specs)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             ON CONFLICT (id) DO NOTHING`,
-            [
-              `${order.id}-item-${i}`,
-              order.id,
-              item.productId,
-              item.name,
-              item.image,
-              item.price,
-              item.quantity,
-              item.selectedSpecs ? JSON.stringify(item.selectedSpecs) : null
-            ]
-          )
+          try {
+            await pool.query(
+              `INSERT INTO order_items (id, order_id, product_id, name, image, price, quantity, selected_specs)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+               ON CONFLICT (id) DO NOTHING`,
+              [
+                `${order.id}-item-${i}`,
+                order.id,
+                item.productId,
+                item.name,
+                item.image,
+                item.price,
+                item.quantity,
+                item.selectedSpecs ? JSON.stringify(item.selectedSpecs) : null
+              ]
+            )
+          } catch (error: any) {
+            console.warn(`迁移订单项 ${order.id}-item-${i} 失败:`, error.message)
+          }
         }
       }
 
       // 插入订单地址
       if (order.address) {
-        await pool.query(
-          `INSERT INTO order_addresses (id, order_id, name, phone, province, city, district, detail, is_default, tag)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           ON CONFLICT (id) DO NOTHING`,
-          [
-            `${order.id}-addr`,
-            order.id,
-            order.address.name,
-            order.address.phone,
-            order.address.province,
-            order.address.city,
-            order.address.district,
-            order.address.detail,
-            order.address.isDefault || false,
-            order.address.tag || null
-          ]
-        )
+        try {
+          await pool.query(
+            `INSERT INTO order_addresses (id, order_id, name, phone, province, city, district, detail, is_default, tag)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              `${order.id}-addr`,
+              order.id,
+              order.address.name,
+              order.address.phone,
+              order.address.province,
+              order.address.city,
+              order.address.district,
+              order.address.detail,
+              order.address.isDefault || false,
+              order.address.tag || null
+            ]
+          )
+        } catch (error: any) {
+          console.warn(`迁移订单地址 ${order.id}-addr 失败:`, error.message)
+        }
       }
+      
+      successCount++
     } catch (error: any) {
       console.error(`迁移订单 ${order.id} 失败:`, error.message)
+      failCount++
     }
   }
-  console.log('订单迁移完成')
+  console.log(`订单迁移完成（成功: ${successCount}, 失败: ${failCount}）`)
 }
 
 async function migrateRegions(pool: Pool) {
@@ -239,6 +274,95 @@ async function migrateRegions(pool: Pool) {
     }
   }
   console.log('地区迁移完成')
+}
+
+async function migrateCategories(pool: Pool) {
+  const categoriesFile = path.join(DATA_DIR, 'categories.json')
+  if (!fs.existsSync(categoriesFile)) {
+    console.log('categories.json 不存在，跳过分类迁移')
+    return
+  }
+
+  const categoriesData = readJsonFile<any[]>(categoriesFile)
+  console.log(`开始迁移分类数据...`)
+  
+  let mainCategoryCount = 0
+  let subCategoryCount = 0
+  
+  // 遍历每个一级分类
+  for (const category of categoriesData) {
+    if (!category.id || !category.name) {
+      console.warn('跳过无效的分类数据:', category)
+      continue
+    }
+    
+    // 迁移一级分类
+    try {
+      // 使用 id 作为 code（如果没有单独的 code 字段）
+      const categoryCode = category.code || category.id
+      
+      await pool.query(
+        `INSERT INTO categories (id, name, code, parent_id, level, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           code = EXCLUDED.code,
+           sort_order = EXCLUDED.sort_order`,
+        [
+          category.id,
+          category.name,
+          categoryCode,
+          null, // parent_id 为 NULL 表示一级分类
+          1, // level 1 表示一级分类
+          mainCategoryCount // 使用索引作为 sort_order
+        ]
+      )
+      mainCategoryCount++
+    } catch (error: any) {
+      if (error.code !== '23505') {
+        console.error(`迁移一级分类 ${category.id} 失败:`, error.message)
+      }
+    }
+    
+    // 迁移子分类
+    if (category.subCategories && Array.isArray(category.subCategories)) {
+      for (let i = 0; i < category.subCategories.length; i++) {
+        const subCat = category.subCategories[i]
+        if (!subCat.id || !subCat.name) {
+          continue
+        }
+        
+        try {
+          const subCategoryCode = subCat.code || subCat.id
+          
+          await pool.query(
+            `INSERT INTO categories (id, name, code, parent_id, level, sort_order)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO UPDATE SET
+               name = EXCLUDED.name,
+               code = EXCLUDED.code,
+               parent_id = EXCLUDED.parent_id,
+               sort_order = EXCLUDED.sort_order`,
+            [
+              subCat.id,
+              subCat.name,
+              subCategoryCode,
+              category.id, // parent_id 指向一级分类
+              2, // level 2 表示二级分类
+              i // 使用索引作为 sort_order
+            ]
+          )
+          subCategoryCount++
+        } catch (error: any) {
+          if (error.code !== '23505') {
+            console.error(`迁移子分类 ${subCat.id} 失败:`, error.message)
+          }
+        }
+      }
+    }
+  }
+  
+  console.log(`分类迁移完成（${mainCategoryCount} 个一级分类，${subCategoryCount} 个子分类）`)
 }
 
 async function migrateHomepageComponents(pool: Pool) {
@@ -474,14 +598,22 @@ async function main() {
     }
     console.log('数据库表结构创建完成')
 
-    // 迁移数据
+    // 迁移数据（按依赖顺序）
+    // 1. 先迁移基础数据（用户、分类、地区）
     await migrateUsers(pool)
-    await migrateAddresses(pool)
-    await migrateProducts(pool)
-    await migrateOrders(pool)
+    await migrateCategories(pool)  // 分类需要在商品之前迁移
     await migrateRegions(pool)
+    
+    // 2. 迁移商品数据（依赖分类）
+    await migrateProducts(pool)
+    
+    // 3. 迁移用户相关数据（依赖用户）
+    await migrateAddresses(pool)
+    await migrateOrders(pool)
+    
+    // 4. 初始化组件配置（依赖分类和商品）
     await migrateHomepageComponents(pool)
-    await migrateCategoryComponents(pool)
+    await migrateCategoryComponents(pool)  // 分类迁移后，才能初始化分类页组件配置
 
     console.log('数据迁移完成！')
   } catch (error) {
