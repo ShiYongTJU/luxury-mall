@@ -226,7 +226,7 @@ pipeline {
         // 阶段 4: 运行测试（可选）
         stage('Tests') {
             when {
-                not { params.SKIP_TESTS }
+                expression { !params.SKIP_TESTS }
             }
             steps {
                 script {
