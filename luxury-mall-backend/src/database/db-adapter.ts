@@ -656,40 +656,72 @@ export class Database {
     this.updateOrder(order, userId)
   }
 
-  // 商品相关（保持 JSON 文件方式，因为商品数据量大且变化少）
-  static getProducts(): Product[] {
+  // 商品相关
+  static async getProducts(): Promise<Product[]> {
+    if (USE_DATABASE) {
+      const { getProducts } = await import('./pg-db')
+      return await getProducts()
+    }
     return readJsonFile<Product[]>(PRODUCTS_FILE, [])
   }
 
   static saveProducts(products: Product[]): void {
+    if (USE_DATABASE) {
+      console.warn('saveProducts() 在数据库模式下应使用数据库操作')
+      return
+    }
     writeJsonFile(PRODUCTS_FILE, products)
   }
 
-  static getProductById(id: string): Product | null {
-    const products = this.getProducts()
+  static async getProductById(id: string): Promise<Product | null> {
+    if (USE_DATABASE) {
+      const { getProductById } = await import('./pg-db')
+      return await getProductById(id)
+    }
+    const products = await this.getProducts()
     return products.find(p => p.id === id) || null
   }
 
   // 分类相关
-  static getCategories(): Category[] {
+  static async getCategories(): Promise<Category[]> {
+    if (USE_DATABASE) {
+      const { getCategories } = await import('./pg-db')
+      return await getCategories()
+    }
     return readJsonFile<Category[]>(CATEGORIES_FILE, [])
   }
 
   static saveCategories(categories: Category[]): void {
+    if (USE_DATABASE) {
+      console.warn('saveCategories() 在数据库模式下应使用数据库操作')
+      return
+    }
     writeJsonFile(CATEGORIES_FILE, categories)
   }
 
   // 首页数据
-  static getHomePageData(): HomePageData {
+  static async getHomePageData(): Promise<HomePageData> {
+    if (USE_DATABASE) {
+      const { getHomePageData } = await import('./pg-db')
+      return await getHomePageData()
+    }
     return readJsonFile<HomePageData>(HOMEPAGE_FILE, { components: [] })
   }
 
   static saveHomePageData(data: HomePageData): void {
+    if (USE_DATABASE) {
+      console.warn('saveHomePageData() 在数据库模式下应使用数据库操作')
+      return
+    }
     writeJsonFile(HOMEPAGE_FILE, data)
   }
 
   // 地区相关
-  static getRegions(): any[] {
+  static async getRegions(): Promise<any[]> {
+    if (USE_DATABASE) {
+      const { getRegions } = await import('./pg-db')
+      return await getRegions()
+    }
     return readJsonFile<any[]>(REGIONS_FILE, [])
   }
 }

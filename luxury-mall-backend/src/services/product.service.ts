@@ -5,7 +5,7 @@ export class ProductService {
   // 获取所有商品
   static async getAllProducts(category?: string): Promise<Product[]> {
     await new Promise(resolve => setTimeout(resolve, 100))
-    const products = Database.getProducts()
+    const products = await Database.getProducts()
     
     if (category) {
       return products.filter(p => p.category === category)
@@ -16,7 +16,7 @@ export class ProductService {
   // 根据 ID 获取商品
   static async getProductById(id: string): Promise<Product | null> {
     await new Promise(resolve => setTimeout(resolve, 100))
-    return Database.getProductById(id)
+    return await Database.getProductById(id)
   }
 
   // 搜索商品（模糊搜索）
@@ -27,7 +27,7 @@ export class ProductService {
       return []
     }
     
-    const products = Database.getProducts()
+    const products = await Database.getProducts()
     const lowerKeyword = keyword.toLowerCase().trim()
     
     return products.filter((product) => {
@@ -43,13 +43,13 @@ export class ProductService {
   // 获取分类列表
   static async getCategories(): Promise<Category[]> {
     await new Promise(resolve => setTimeout(resolve, 100))
-    return Database.getCategories()
+    return await Database.getCategories()
   }
 
   // 获取首页数据
   static async getHomePageData(): Promise<HomePageData> {
     await new Promise(resolve => setTimeout(resolve, 200))
-    return Database.getHomePageData()
+    return await Database.getHomePageData()
   }
 }
 

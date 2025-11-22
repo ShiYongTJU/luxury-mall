@@ -354,12 +354,127 @@ EOF
             }
         }
         
-        // 阶段 6: 健康检查
+        // 阶段 6: 数据库迁移（可选，仅生产环境）
+        stage('Database Migration') {
+            when {
+                allOf {
+                    anyOf {
+                        branch 'main'
+                        branch 'master'
+                    }
+                    expression { params.RUN_MIGRATION == true }
+                }
+            }
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 6: 数据库迁移"
+                    echo "=========================================="
+                    
+                    dir("${PROJECT_DIR}") {
+                        script {
+                            def composeFiles = DEPLOY_ENV == 'production' ? 
+                                '-f docker-compose.yml -f docker-compose.prod.yml' :
+                                '-f docker-compose.yml -f docker-compose.dev.yml'
+                            
+                            sh """
+                                echo "等待数据库服务就绪..."
+                                
+                                # 检查 postgres 容器是否运行
+                                for i in {1..30}; do
+                                    if docker-compose ${composeFiles} ps postgres | grep -q "Up"; then
+                                        echo "✓ PostgreSQL 容器已启动"
+                                        break
+                                    fi
+                                    if [ \$i -eq 30 ]; then
+                                        echo "✗ PostgreSQL 容器启动失败（30次重试后）"
+                                        docker-compose ${composeFiles} logs postgres | tail -50
+                                        exit 1
+                                    fi
+                                    echo "  等待 PostgreSQL 容器启动... (\$i/30)"
+                                    sleep 2
+                                done
+                                
+                                # 等待数据库健康检查通过
+                                echo "等待数据库健康检查..."
+                                for i in {1..30}; do
+                                    if docker-compose ${composeFiles} exec -T postgres pg_isready -U \${DB_USER:-postgres} > /dev/null 2>&1; then
+                                        echo "✓ 数据库健康检查通过"
+                                        break
+                                    fi
+                                    if [ \$i -eq 30 ]; then
+                                        echo "✗ 数据库健康检查失败（30次重试后）"
+                                        docker-compose ${composeFiles} logs postgres | tail -50
+                                        exit 1
+                                    fi
+                                    echo "  等待数据库就绪... (\$i/30)"
+                                    sleep 2
+                                done
+                                
+                                # 额外等待 5 秒，确保数据库完全初始化
+                                echo "等待数据库完全初始化..."
+                                sleep 5
+                                
+                                # 检查后端容器是否运行
+                                echo "检查后端容器状态..."
+                                for i in {1..20}; do
+                                    if docker-compose ${composeFiles} ps backend | grep -q "Up"; then
+                                        echo "✓ 后端容器已启动"
+                                        break
+                                    fi
+                                    if [ \$i -eq 20 ]; then
+                                        echo "✗ 后端容器启动失败（20次重试后）"
+                                        docker-compose ${composeFiles} logs backend | tail -50
+                                        exit 1
+                                    fi
+                                    echo "  等待后端容器启动... (\$i/20)"
+                                    sleep 2
+                                done
+                                
+                                # 执行数据库迁移
+                                echo "=========================================="
+                                echo "开始执行数据库迁移..."
+                                echo "=========================================="
+                                
+                                # 检查迁移脚本是否存在
+                                echo "检查迁移脚本..."
+                                docker-compose ${composeFiles} exec -T backend sh -c 'test -f /app/dist/scripts/migrate-to-db.js && echo "✓ 迁移脚本存在" || echo "✗ 迁移脚本不存在"'
+                                
+                                # 执行迁移
+                                if docker-compose ${composeFiles} exec -T backend npm run migrate-to-db; then
+                                    echo "=========================================="
+                                    echo "✓ 数据库迁移成功完成"
+                                    echo "=========================================="
+                                    
+                                    # 验证迁移结果（可选）
+                                    echo "验证迁移结果..."
+                                    docker-compose ${composeFiles} exec -T postgres psql -U \${DB_USER:-postgres} -d \${DB_NAME:-luxury_mall} -c "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public';" || true
+                                else
+                                    echo "=========================================="
+                                    echo "⚠ 数据库迁移执行失败"
+                                    echo "=========================================="
+                                    echo "查看迁移日志:"
+                                    docker-compose ${composeFiles} logs backend | grep -i migrate | tail -50 || true
+                                    echo ""
+                                    echo "如果这是首次部署，可能需要手动执行迁移:"
+                                    echo "  docker-compose ${composeFiles} exec backend npm run migrate-to-db"
+                                    echo ""
+                                    echo "如果表已存在，这是正常的，迁移会跳过已存在的数据"
+                                    # 不中断构建，仅警告
+                                fi
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 阶段 7: 健康检查
         stage('Health Check') {
             steps {
                 script {
                     echo "=========================================="
-                    echo "阶段 6: 健康检查"
+                    echo "阶段 7: 健康检查"
                     echo "=========================================="
                     
                     dir("${PROJECT_DIR}") {
@@ -404,44 +519,21 @@ EOF
                                 done
                             """
                             
+                            // 如果是生产环境且使用数据库，检查数据库连接
+                            if (DEPLOY_ENV == 'production') {
+                                sh """
+                                    echo "检查数据库连接..."
+                                    if docker-compose ${composeFiles} exec -T postgres psql -U \${DB_USER:-postgres} -d \${DB_NAME:-luxury_mall} -c "SELECT 1;" > /dev/null 2>&1; then
+                                        echo "✓ 数据库连接正常"
+                                    else
+                                        echo "⚠ 数据库连接检查失败（可能不影响服务）"
+                                    fi
+                                """
+                            }
+                            
                             echo "=========================================="
                             echo "✓ 所有服务健康检查通过"
                             echo "=========================================="
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 阶段 7: 数据库迁移（可选，仅生产环境）
-        stage('Database Migration') {
-            when {
-                allOf {
-                    anyOf {
-                        branch 'main'
-                        branch 'master'
-                    }
-                    expression { params.RUN_MIGRATION == true }
-                }
-            }
-            steps {
-                script {
-                    echo "=========================================="
-                    echo "阶段 7: 数据库迁移"
-                    echo "=========================================="
-                    
-                    dir("${PROJECT_DIR}") {
-                        script {
-                            sh '''
-                                echo "执行数据库迁移..."
-                                docker-compose -f docker-compose.yml -f docker-compose.prod.yml \
-                                    exec -T backend npm run migrate-to-db || {
-                                    echo "⚠ 数据库迁移失败或已是最新状态"
-                                    echo "如果这是首次部署，请手动执行迁移"
-                                }
-                                
-                                echo "✓ 数据库迁移完成"
-                            '''
                         }
                     }
                 }

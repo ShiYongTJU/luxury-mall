@@ -1,7 +1,7 @@
 import { Pool, QueryResult } from 'pg'
 import { User } from '../types/user'
 import { Address, Order, OrderItem } from '../types/address'
-import { Product, Category } from '../types/product'
+import { Product, Category, HomePageData, PageComponent } from '../types/product'
 
 // PostgreSQL 连接池
 let pool: Pool | null = null
@@ -307,7 +307,7 @@ export async function getOrders(userId?: string): Promise<Order[]> {
   return orders
 }
 
-// 商品相关（简化实现）
+// 商品相关
 export async function getProducts(): Promise<Product[]> {
   const result = await getPool().query('SELECT * FROM products ORDER BY create_time DESC')
   return result.rows.map((row: any) => ({
@@ -332,6 +332,271 @@ export async function getProducts(): Promise<Product[]> {
   }))
 }
 
-// 其他方法类似实现...
-// 为了简化，这里只展示关键方法
+export async function getProductById(id: string): Promise<Product | null> {
+  const result = await getPool().query('SELECT * FROM products WHERE id = $1', [id])
+  if (result.rows.length === 0) return null
+  
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    image: row.image,
+    price: parseFloat(row.price),
+    originalPrice: row.original_price ? parseFloat(row.original_price) : undefined,
+    tag: row.tag,
+    category: row.category,
+    subCategory: row.sub_category,
+    brand: row.brand,
+    images: row.images ? JSON.parse(row.images) : undefined,
+    detailDescription: row.detail_description,
+    highlights: row.highlights ? JSON.parse(row.highlights) : undefined,
+    specs: row.specs ? JSON.parse(row.specs) : undefined,
+    reviews: row.reviews ? JSON.parse(row.reviews) : undefined,
+    services: row.services ? JSON.parse(row.services) : undefined,
+    shippingInfo: row.shipping_info,
+    stock: row.stock
+  }
+}
+
+// 分类相关
+export async function getCategories(): Promise<Category[]> {
+  // 获取所有一级分类
+  const mainCategoriesResult = await getPool().query(`
+    SELECT id, name, code, sort_order
+    FROM categories
+    WHERE parent_id IS NULL
+    ORDER BY sort_order, name
+  `)
+  
+  const categories: Category[] = []
+  
+  for (const mainCat of mainCategoriesResult.rows) {
+    // 获取子分类
+    const subCategoriesResult = await getPool().query(`
+      SELECT id, name, code, sort_order
+      FROM categories
+      WHERE parent_id = $1
+      ORDER BY sort_order, name
+    `, [mainCat.id])
+    
+    const subCategories = []
+    
+    for (const subCat of subCategoriesResult.rows) {
+      // 获取该子分类下的商品
+      const productsResult = await getPool().query(`
+        SELECT * FROM products
+        WHERE sub_category = $1 OR category = $2
+        ORDER BY create_time DESC
+        LIMIT 50
+      `, [subCat.id, mainCat.id])
+      
+      const products = productsResult.rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        image: row.image,
+        price: parseFloat(row.price),
+        originalPrice: row.original_price ? parseFloat(row.original_price) : undefined,
+        tag: row.tag,
+        category: row.category,
+        subCategory: row.sub_category,
+        brand: row.brand,
+        images: row.images ? JSON.parse(row.images) : undefined,
+        detailDescription: row.detail_description,
+        highlights: row.highlights ? JSON.parse(row.highlights) : undefined,
+        specs: row.specs ? JSON.parse(row.specs) : undefined,
+        reviews: row.reviews ? JSON.parse(row.reviews) : undefined,
+        services: row.services ? JSON.parse(row.services) : undefined,
+        shippingInfo: row.shipping_info,
+        stock: row.stock
+      }))
+      
+      subCategories.push({
+        id: subCat.id,
+        name: subCat.name,
+        products
+      })
+    }
+    
+    categories.push({
+      id: mainCat.id,
+      name: mainCat.name,
+      icon: '', // 分类表没有 icon 字段，可以后续添加或从配置获取
+      subCategories
+    })
+  }
+  
+  return categories
+}
+
+// 地区相关
+export async function getRegions(): Promise<any[]> {
+  const result = await getPool().query(`
+    SELECT code, name, parent_code, level
+    FROM regions
+    ORDER BY level, name
+  `)
+  
+  // 构建嵌套结构
+  const regionMap = new Map<string, any>()
+  const rootRegions: any[] = []
+  
+  // 第一遍：创建所有节点
+  result.rows.forEach((row: any) => {
+    const region = {
+      code: row.code,
+      name: row.name,
+      parentCode: row.parent_code,
+      level: row.level,
+      children: [] as any[]
+    }
+    regionMap.set(row.code, region)
+  })
+  
+  // 第二遍：构建父子关系
+  result.rows.forEach((row: any) => {
+    const region = regionMap.get(row.code)!
+    if (row.parent_code) {
+      const parent = regionMap.get(row.parent_code)
+      if (parent) {
+        parent.children.push(region)
+      }
+    } else {
+      rootRegions.push(region)
+    }
+  })
+  
+  return rootRegions
+}
+
+// 首页数据 - 从 products 表动态生成
+export async function getHomePageData(): Promise<HomePageData> {
+  // 获取轮播图商品（带 tag 的商品）
+  const carouselProducts = await getPool().query(`
+    SELECT * FROM products 
+    WHERE tag IS NOT NULL AND tag != ''
+    ORDER BY create_time DESC
+    LIMIT 5
+  `)
+  
+  // 获取秒杀商品
+  const seckillProducts = await getPool().query(`
+    SELECT * FROM products 
+    WHERE tag = 'seckill' OR tag LIKE '%秒杀%'
+    ORDER BY create_time DESC
+    LIMIT 10
+  `)
+  
+  // 获取团购商品
+  const groupbuyProducts = await getPool().query(`
+    SELECT * FROM products 
+    WHERE tag = 'groupbuy' OR tag LIKE '%团购%'
+    ORDER BY create_time DESC
+    LIMIT 10
+  `)
+  
+  // 获取猜你喜欢商品
+  const guessYouLikeProducts = await getPool().query(`
+    SELECT * FROM products 
+    ORDER BY create_time DESC
+    LIMIT 20
+  `)
+  
+  const mapProduct = (row: any): Product => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    image: row.image,
+    price: parseFloat(row.price),
+    originalPrice: row.original_price ? parseFloat(row.original_price) : undefined,
+    tag: row.tag,
+    category: row.category,
+    subCategory: row.sub_category,
+    brand: row.brand,
+    images: row.images ? JSON.parse(row.images) : undefined,
+    detailDescription: row.detail_description,
+    highlights: row.highlights ? JSON.parse(row.highlights) : undefined,
+    specs: row.specs ? JSON.parse(row.specs) : undefined,
+    reviews: row.reviews ? JSON.parse(row.reviews) : undefined,
+    services: row.services ? JSON.parse(row.services) : undefined,
+    shippingInfo: row.shipping_info,
+    stock: row.stock
+  })
+  
+  const components: PageComponent[] = []
+  
+  // 轮播图组件
+  if (carouselProducts.rows.length > 0) {
+    components.push({
+      type: 'carousel',
+      id: 'carousel-1',
+      config: {
+        title: '热门推荐'
+      },
+      data: carouselProducts.rows.map((row: any) => ({
+        id: row.id,
+        image: row.image,
+        title: row.name,
+        link: `/product/${row.id}`
+      }))
+    })
+  }
+  
+  // 秒杀组件
+  if (seckillProducts.rows.length > 0) {
+    components.push({
+      type: 'seckill',
+      id: 'seckill-1',
+      config: {
+        title: '限时秒杀'
+      },
+      data: seckillProducts.rows.map(mapProduct)
+    })
+  }
+  
+  // 团购组件
+  if (groupbuyProducts.rows.length > 0) {
+    components.push({
+      type: 'groupbuy',
+      id: 'groupbuy-1',
+      config: {
+        title: '团购优惠'
+      },
+      data: groupbuyProducts.rows.map(mapProduct)
+    })
+  }
+  
+  // 商品列表组件
+  const allProducts = await getPool().query(`
+    SELECT * FROM products 
+    ORDER BY create_time DESC
+    LIMIT 20
+  `)
+  
+  if (allProducts.rows.length > 0) {
+    components.push({
+      type: 'productList',
+      id: 'product-list-1',
+      config: {
+        title: '精选商品'
+      },
+      data: allProducts.rows.map(mapProduct)
+    })
+  }
+  
+  // 猜你喜欢组件
+  if (guessYouLikeProducts.rows.length > 0) {
+    components.push({
+      type: 'guessYouLike',
+      id: 'guess-you-like-1',
+      config: {
+        title: '猜你喜欢'
+      },
+      data: guessYouLikeProducts.rows.map(mapProduct)
+    })
+  }
+  
+  return { components }
+}
 

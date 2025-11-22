@@ -8,7 +8,7 @@ export const getProvinces = async (
   next: NextFunction
 ) => {
   try {
-    const regions = Database.getRegions()
+    const regions = await Database.getRegions()
     const provinces = regions.map(province => ({
       code: province.code,
       name: province.name
@@ -27,7 +27,7 @@ export const getCities = async (
 ) => {
   try {
     const { provinceCode } = req.params
-    const regions = Database.getRegions()
+    const regions = await Database.getRegions()
     const province = regions.find(p => p.code === provinceCode)
     
     if (!province) {
@@ -53,7 +53,7 @@ export const getDistricts = async (
 ) => {
   try {
     const { provinceCode, cityCode } = req.params
-    const regions = Database.getRegions()
+    const regions = await Database.getRegions()
     const province = regions.find(p => p.code === provinceCode)
     
     if (!province) {
