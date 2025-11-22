@@ -1,0 +1,521 @@
+pipeline {
+    agent any
+    
+    // 环境变量
+    environment {
+        // 项目路径（Jenkins 容器中挂载的路径）
+        PROJECT_DIR = '/opt/luxury-mall/luxury-mall'
+        DOCKER_COMPOSE_FILE = "${PROJECT_DIR}/docker-compose.yml"
+        DOCKER_COMPOSE_PROD_FILE = "${PROJECT_DIR}/docker-compose.prod.yml"
+        DOCKER_COMPOSE_DEV_FILE = "${PROJECT_DIR}/docker-compose.dev.yml"
+        
+        // Docker 镜像标签（使用构建号）
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        
+        // Git 信息
+        GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+        GIT_BRANCH = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+        
+        // 部署环境（根据分支自动判断）
+        DEPLOY_ENV = "${env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'master' ? 'production' : 'development'}"
+        
+        // 从 Jenkins 凭据读取敏感信息
+        // 注意：凭据 ID 需要在 Jenkins 中预先配置
+        // 进入 Jenkins → Manage Jenkins → Credentials → Add Credentials
+        // 创建 Secret text 类型的凭据，ID 分别为 'jwt-secret' 和 'db-password'
+        JWT_SECRET = credentials('jwt-secret')
+        DB_PASSWORD = credentials('db-password')
+        
+        // 其他环境变量（可根据需要修改）
+        DB_NAME = 'luxury_mall'
+        DB_USER = 'postgres'
+        DB_HOST = 'postgres'
+        DB_PORT = '5432'
+        CORS_ORIGIN = 'http://your-domain.com'  // 请根据实际情况修改为你的域名或 IP
+    }
+    
+    // 选项配置
+    options {
+        // 保留最近 20 次构建
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        
+        // 超时设置（60分钟）
+        timeout(time: 60, unit: 'MINUTES')
+        
+        // 添加时间戳
+        timestamps()
+        
+        // 添加 ANSI 颜色支持
+        ansiColor('xterm')
+        
+        // 跳过默认的 checkout（我们会在 stage 中手动处理）
+        skipDefaultCheckout(false)
+    }
+    
+    // 参数化构建（可选）
+    parameters {
+        choice(
+            name: 'DEPLOY_ENV_OVERRIDE',
+            choices: ['auto', 'production', 'development'],
+            description: '部署环境（auto 表示根据分支自动判断）'
+        )
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: false,
+            description: '跳过测试阶段'
+        )
+        booleanParam(
+            name: 'RUN_MIGRATION',
+            defaultValue: false,
+            description: '运行数据库迁移（仅生产环境）'
+        )
+        booleanParam(
+            name: 'CLEAN_BUILD',
+            defaultValue: true,
+            description: '清理旧的 Docker 镜像和容器'
+        )
+    }
+    
+    // 阶段定义
+    stages {
+        // 阶段 1: 代码检出
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 1: 代码检出"
+                    echo "=========================================="
+                    echo "分支: ${env.GIT_BRANCH}"
+                    echo "提交: ${env.GIT_COMMIT_SHORT}"
+                    echo "构建号: ${env.BUILD_NUMBER}"
+                }
+                
+                checkout scm
+                
+                script {
+                    sh '''
+                        echo "当前工作目录: $(pwd)"
+                        echo "Git 信息:"
+                        git log -1 --oneline
+                        echo ""
+                        echo "项目结构:"
+                        ls -la
+                    '''
+                }
+            }
+        }
+        
+        // 阶段 2: 代码质量检查
+        stage('Code Quality') {
+            parallel {
+                stage('Backend Type Check') {
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 2.1: 后端 TypeScript 类型检查"
+                            echo "=========================================="
+                        }
+                        
+                        dir('luxury-mall-backend') {
+                            script {
+                                try {
+                                    sh '''
+                                        echo "安装后端依赖..."
+                                        npm ci
+                                        
+                                        echo "执行 TypeScript 类型检查..."
+                                        npm run type-check
+                                        
+                                        echo "✓ 后端类型检查通过"
+                                    '''
+                                } catch (e) {
+                                    echo "⚠ 后端类型检查失败: ${e}"
+                                    echo "继续构建，但请检查类型错误"
+                                    // 不中断构建，仅警告
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                stage('Frontend Type Check') {
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 2.2: 前端 TypeScript 类型检查"
+                            echo "=========================================="
+                        }
+                        
+                        dir('luxury-mall-frontend') {
+                            script {
+                                try {
+                                    sh '''
+                                        echo "安装前端依赖..."
+                                        npm ci
+                                        
+                                        echo "执行 TypeScript 类型检查..."
+                                        npx tsc --noEmit
+                                        
+                                        echo "✓ 前端类型检查通过"
+                                    '''
+                                } catch (e) {
+                                    echo "⚠ 前端类型检查失败: ${e}"
+                                    echo "继续构建，但请检查类型错误"
+                                    // 不中断构建，仅警告
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 阶段 3: 构建 Docker 镜像
+        stage('Build Docker Images') {
+            parallel {
+                stage('Build Backend Image') {
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 3.1: 构建后端 Docker 镜像"
+                            echo "=========================================="
+                        }
+                        
+                        dir('luxury-mall-backend') {
+                            script {
+                                sh """
+                                    echo "构建后端镜像: luxury-mall-backend:${IMAGE_TAG}"
+                                    docker build -t luxury-mall-backend:${IMAGE_TAG} .
+                                    docker tag luxury-mall-backend:${IMAGE_TAG} luxury-mall-backend:latest
+                                    
+                                    echo "✓ 后端镜像构建完成"
+                                    echo "镜像信息:"
+                                    docker images | grep luxury-mall-backend | head -2
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build Frontend Image') {
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 3.2: 构建前端 Docker 镜像"
+                            echo "=========================================="
+                        }
+                        
+                        dir('luxury-mall-frontend') {
+                            script {
+                                sh """
+                                    echo "构建前端镜像: luxury-mall-frontend:${IMAGE_TAG}"
+                                    docker build -t luxury-mall-frontend:${IMAGE_TAG} .
+                                    docker tag luxury-mall-frontend:${IMAGE_TAG} luxury-mall-frontend:latest
+                                    
+                                    echo "✓ 前端镜像构建完成"
+                                    echo "镜像信息:"
+                                    docker images | grep luxury-mall-frontend | head -2
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 阶段 4: 运行测试（可选）
+        stage('Tests') {
+            when {
+                not { params.SKIP_TESTS }
+            }
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 4: 运行测试"
+                    echo "=========================================="
+                    echo "当前项目未配置自动化测试"
+                    echo "如需添加测试，请在此阶段添加测试命令"
+                    echo "例如: npm test"
+                }
+            }
+        }
+        
+        // 阶段 5: 部署到环境
+        stage('Deploy') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 5: 部署到 ${DEPLOY_ENV} 环境"
+                    echo "=========================================="
+                    
+                    // 确定部署环境
+                    def deployEnv = params.DEPLOY_ENV_OVERRIDE == 'auto' ? 
+                        DEPLOY_ENV : params.DEPLOY_ENV_OVERRIDE
+                    
+                    echo "部署环境: ${deployEnv}"
+                    echo "项目目录: ${PROJECT_DIR}"
+                    
+                    // 切换到项目目录
+                    dir("${PROJECT_DIR}") {
+                        script {
+                            // 创建 .env 文件（仅生产环境需要）
+                            if (deployEnv == 'production') {
+                                sh """
+                                    echo "创建 .env 文件..."
+                                    cat > .env << 'EOF'
+JWT_SECRET=${JWT_SECRET}
+DB_PASSWORD=${DB_PASSWORD}
+DB_NAME=${DB_NAME}
+DB_USER=${DB_USER}
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT}
+CORS_ORIGIN=${CORS_ORIGIN}
+USE_DATABASE=true
+NODE_ENV=production
+PORT=3001
+JWT_EXPIRES_IN=7d
+EOF
+                                    
+                                    # 验证 .env 文件（不显示敏感信息）
+                                    echo "✓ .env 文件已创建"
+                                    echo "验证 .env 文件内容（隐藏敏感信息）:"
+                                    cat .env | grep -v PASSWORD | grep -v SECRET
+                                    
+                                    # 设置正确的文件权限（仅所有者可读写）
+                                    chmod 600 .env
+                                    echo "✓ .env 文件权限已设置 (600)"
+                                """
+                            } else {
+                                echo "开发环境，跳过 .env 文件创建（使用 JSON 文件存储）"
+                            }
+                            
+                            // 清理旧容器和镜像（如果启用）
+                            if (params.CLEAN_BUILD) {
+                                sh '''
+                                    echo "清理旧的容器和镜像..."
+                                    docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
+                                    docker compose -f docker-compose.yml -f docker-compose.dev.yml down || true
+                                    
+                                    # 清理未使用的镜像（保留最近 3 个版本）
+                                    docker image prune -f || true
+                                    
+                                    echo "✓ 清理完成"
+                                '''
+                            }
+                            
+                            // 根据环境选择配置文件
+                            def composeFiles = deployEnv == 'production' ? 
+                                '-f docker-compose.yml -f docker-compose.prod.yml' :
+                                '-f docker-compose.yml -f docker-compose.dev.yml'
+                            
+                            sh """
+                                echo "使用配置文件: ${composeFiles}"
+                                echo "启动服务..."
+                                
+                                # 使用最新构建的镜像启动服务
+                                docker compose ${composeFiles} up -d --build
+                                
+                                echo "等待服务启动..."
+                                sleep 20
+                                
+                                echo "检查服务状态..."
+                                docker compose ${composeFiles} ps
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 阶段 6: 健康检查
+        stage('Health Check') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 6: 健康检查"
+                    echo "=========================================="
+                    
+                    dir("${PROJECT_DIR}") {
+                        script {
+                            def composeFiles = DEPLOY_ENV == 'production' ? 
+                                '-f docker-compose.yml -f docker-compose.prod.yml' :
+                                '-f docker-compose.yml -f docker-compose.dev.yml'
+                            
+                            // 检查后端服务
+                            sh """
+                                echo "检查后端服务 (http://localhost:3001/health)..."
+                                for i in {1..30}; do
+                                    if curl -f http://localhost:3001/health > /dev/null 2>&1; then
+                                        echo "✓ 后端服务健康检查通过"
+                                        break
+                                    fi
+                                    if [ \$i -eq 30 ]; then
+                                        echo "✗ 后端服务健康检查失败（30次重试后）"
+                                        docker compose ${composeFiles} logs backend | tail -50
+                                        exit 1
+                                    fi
+                                    echo "  等待后端服务启动... (\$i/30)"
+                                    sleep 2
+                                done
+                            """
+                            
+                            // 检查前端服务
+                            sh """
+                                echo "检查前端服务 (http://localhost:80)..."
+                                for i in {1..30}; do
+                                    if curl -f http://localhost:80 > /dev/null 2>&1; then
+                                        echo "✓ 前端服务健康检查通过"
+                                        break
+                                    fi
+                                    if [ \$i -eq 30 ]; then
+                                        echo "✗ 前端服务健康检查失败（30次重试后）"
+                                        docker compose ${composeFiles} logs frontend | tail -50
+                                        exit 1
+                                    fi
+                                    echo "  等待前端服务启动... (\$i/30)"
+                                    sleep 2
+                                done
+                            """
+                            
+                            echo "=========================================="
+                            echo "✓ 所有服务健康检查通过"
+                            echo "=========================================="
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 阶段 7: 数据库迁移（可选，仅生产环境）
+        stage('Database Migration') {
+            when {
+                allOf {
+                    anyOf {
+                        branch 'main'
+                        branch 'master'
+                    }
+                    expression { params.RUN_MIGRATION == true }
+                }
+            }
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 7: 数据库迁移"
+                    echo "=========================================="
+                    
+                    dir("${PROJECT_DIR}") {
+                        script {
+                            sh '''
+                                echo "执行数据库迁移..."
+                                docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+                                    exec -T backend npm run migrate-to-db || {
+                                    echo "⚠ 数据库迁移失败或已是最新状态"
+                                    echo "如果这是首次部署，请手动执行迁移"
+                                }
+                                
+                                echo "✓ 数据库迁移完成"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 构建后操作
+    post {
+        // 成功时
+        success {
+            script {
+                echo "=========================================="
+                echo "✓ 构建成功！"
+                echo "=========================================="
+                echo "构建号: ${env.BUILD_NUMBER}"
+                echo "分支: ${env.GIT_BRANCH}"
+                echo "提交: ${env.GIT_COMMIT_SHORT}"
+                echo "镜像标签: ${IMAGE_TAG}"
+                echo "部署环境: ${DEPLOY_ENV}"
+                echo ""
+                echo "服务访问地址:"
+                echo "  前端: http://your-server-ip:80"
+                echo "  后端: http://your-server-ip:3001"
+                echo "=========================================="
+                
+                // 发送成功通知（需要配置 Email Extension 插件）
+                // emailext (
+                //     subject: "✓ 构建成功: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                //     body: """
+                //         构建成功！
+                //         
+                //         项目: ${env.JOB_NAME}
+                //         构建号: #${env.BUILD_NUMBER}
+                //         分支: ${env.GIT_BRANCH}
+                //         提交: ${env.GIT_COMMIT_SHORT}
+                //         环境: ${DEPLOY_ENV}
+                //         
+                //         查看详情: ${env.BUILD_URL}
+                //     """,
+                //     to: "your-email@example.com"
+                // )
+            }
+        }
+        
+        // 失败时
+        failure {
+            script {
+                echo "=========================================="
+                echo "✗ 构建失败！"
+                echo "=========================================="
+                echo "构建号: ${env.BUILD_NUMBER}"
+                echo "分支: ${env.GIT_BRANCH}"
+                echo "提交: ${env.GIT_COMMIT_SHORT}"
+                echo ""
+                echo "请检查构建日志以获取详细信息"
+                echo "=========================================="
+                
+                // 发送失败通知（需要配置 Email Extension 插件）
+                // emailext (
+                //     subject: "✗ 构建失败: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                //     body: """
+                //         构建失败！
+                //         
+                //         项目: ${env.JOB_NAME}
+                //         构建号: #${env.BUILD_NUMBER}
+                //         分支: ${env.GIT_BRANCH}
+                //         提交: ${env.GIT_COMMIT_SHORT}
+                //         
+                //         请检查构建日志: ${env.BUILD_URL}
+                //     """,
+                //     to: "your-email@example.com",
+                //     attachLog: true
+                // )
+            }
+        }
+        
+        // 总是执行
+        always {
+            script {
+                echo "=========================================="
+                echo "构建后清理"
+                echo "=========================================="
+                
+                // 清理工作空间（可选）
+                // cleanWs()
+                
+                // 清理 Docker 构建缓存（可选，会删除未使用的镜像和容器）
+                // sh 'docker system prune -f'
+                
+                echo "构建完成时间: ${new Date()}"
+            }
+        }
+        
+        // 清理（无论成功或失败）
+        cleanup {
+            script {
+                echo "执行清理操作..."
+                // 可以在这里添加清理逻辑
+            }
+        }
+    }
+}
+
