@@ -9,7 +9,7 @@ import './Settings.css'
 const Settings = () => {
   const navigate = useNavigate()
   const { isAuthenticated, loading: userLoading } = useUser()
-  const { theme, toggleTheme, isDark } = useTheme()
+  const { toggleTheme, isDark } = useTheme()
   const [activeSection, setActiveSection] = useState<'main' | 'address'>('main')
   const hasCheckedAuth = useRef(false) // 防止重复检查登录状态
 
