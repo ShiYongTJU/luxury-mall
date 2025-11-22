@@ -381,7 +381,7 @@ EOF
                                 echo "等待数据库服务就绪..."
                                 
                                 # 检查 postgres 容器是否运行
-                                for i in {1..30}; do
+                                for i in \$(seq 1 30); do
                                     if docker-compose ${composeFiles} ps postgres | grep -q "Up"; then
                                         echo "✓ PostgreSQL 容器已启动"
                                         break
@@ -397,7 +397,7 @@ EOF
                                 
                                 # 等待数据库健康检查通过
                                 echo "等待数据库健康检查..."
-                                for i in {1..30}; do
+                                for i in \$(seq 1 30); do
                                     if docker-compose ${composeFiles} exec -T postgres pg_isready -U \${DB_USER:-postgres} > /dev/null 2>&1; then
                                         echo "✓ 数据库健康检查通过"
                                         break
@@ -417,7 +417,7 @@ EOF
                                 
                                 # 检查后端容器是否运行
                                 echo "检查后端容器状态..."
-                                for i in {1..20}; do
+                                for i in \$(seq 1 20); do
                                     if docker-compose ${composeFiles} ps backend | grep -q "Up"; then
                                         echo "✓ 后端容器已启动"
                                         break
@@ -486,7 +486,7 @@ EOF
                             // 检查后端服务
                             sh """
                                 echo "检查后端服务 (http://localhost:3001/health)..."
-                                for i in {1..30}; do
+                                for i in \$(seq 1 30); do
                                     if curl -f http://localhost:3001/health > /dev/null 2>&1; then
                                         echo "✓ 后端服务健康检查通过"
                                         break
@@ -504,7 +504,7 @@ EOF
                             // 检查前端服务
                             sh """
                                 echo "检查前端服务 (http://localhost:80)..."
-                                for i in {1..30}; do
+                                for i in \$(seq 1 30); do
                                     if curl -f http://localhost:80 > /dev/null 2>&1; then
                                         echo "✓ 前端服务健康检查通过"
                                         break

@@ -8,9 +8,17 @@ import { initDatabase, getPool } from './pg-db'
 
 const USE_DATABASE = process.env.USE_DATABASE === 'true'
 
+// 生产环境强制使用数据库
+const NODE_ENV = process.env.NODE_ENV || 'development'
+const FORCE_USE_DATABASE = NODE_ENV === 'production' && process.env.USE_DATABASE !== 'false'
+const SHOULD_USE_DATABASE = USE_DATABASE || FORCE_USE_DATABASE
+
 // 如果使用数据库，初始化连接
-if (USE_DATABASE) {
+if (SHOULD_USE_DATABASE) {
+  console.log(`[Database] 使用数据库模式 (USE_DATABASE=${USE_DATABASE}, FORCE_USE_DATABASE=${FORCE_USE_DATABASE}, NODE_ENV=${NODE_ENV})`)
   initDatabase()
+} else {
+  console.log(`[Database] 使用 JSON 文件存储 (USE_DATABASE=${USE_DATABASE}, NODE_ENV=${NODE_ENV})`)
 }
 
 const DATA_DIR = path.join(__dirname, '../../data')
@@ -658,11 +666,15 @@ export class Database {
 
   // 商品相关
   static async getProducts(): Promise<Product[]> {
-    if (USE_DATABASE) {
+    if (SHOULD_USE_DATABASE) {
       const { getProducts } = await import('./pg-db')
-      return await getProducts()
+      const products = await getProducts()
+      console.log(`[Database.getProducts] 从数据库读取 ${products.length} 个商品`)
+      return products
     }
-    return readJsonFile<Product[]>(PRODUCTS_FILE, [])
+    const products = readJsonFile<Product[]>(PRODUCTS_FILE, [])
+    console.log(`[Database.getProducts] 从 JSON 文件读取 ${products.length} 个商品`)
+    return products
   }
 
   static saveProducts(products: Product[]): void {
@@ -684,11 +696,15 @@ export class Database {
 
   // 分类相关
   static async getCategories(): Promise<Category[]> {
-    if (USE_DATABASE) {
+    if (SHOULD_USE_DATABASE) {
       const { getCategories } = await import('./pg-db')
-      return await getCategories()
+      const categories = await getCategories()
+      console.log(`[Database.getCategories] 从数据库读取 ${categories.length} 个分类`)
+      return categories
     }
-    return readJsonFile<Category[]>(CATEGORIES_FILE, [])
+    const categories = readJsonFile<Category[]>(CATEGORIES_FILE, [])
+    console.log(`[Database.getCategories] 从 JSON 文件读取 ${categories.length} 个分类`)
+    return categories
   }
 
   static saveCategories(categories: Category[]): void {
@@ -701,11 +717,15 @@ export class Database {
 
   // 首页数据
   static async getHomePageData(): Promise<HomePageData> {
-    if (USE_DATABASE) {
+    if (SHOULD_USE_DATABASE) {
       const { getHomePageData } = await import('./pg-db')
-      return await getHomePageData()
+      const data = await getHomePageData()
+      console.log(`[Database.getHomePageData] 从数据库读取 ${data.components.length} 个组件`)
+      return data
     }
-    return readJsonFile<HomePageData>(HOMEPAGE_FILE, { components: [] })
+    const data = readJsonFile<HomePageData>(HOMEPAGE_FILE, { components: [] })
+    console.log(`[Database.getHomePageData] 从 JSON 文件读取 ${data.components.length} 个组件`)
+    return data
   }
 
   static saveHomePageData(data: HomePageData): void {
@@ -718,11 +738,15 @@ export class Database {
 
   // 地区相关
   static async getRegions(): Promise<any[]> {
-    if (USE_DATABASE) {
+    if (SHOULD_USE_DATABASE) {
       const { getRegions } = await import('./pg-db')
-      return await getRegions()
+      const regions = await getRegions()
+      console.log(`[Database.getRegions] 从数据库读取 ${regions.length} 个地区`)
+      return regions
     }
-    return readJsonFile<any[]>(REGIONS_FILE, [])
+    const regions = readJsonFile<any[]>(REGIONS_FILE, [])
+    console.log(`[Database.getRegions] 从 JSON 文件读取 ${regions.length} 个地区`)
+    return regions
   }
 }
 
