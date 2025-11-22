@@ -74,6 +74,16 @@ pipeline {
             defaultValue: true,
             description: '清理旧的 Docker 镜像和容器'
         )
+        booleanParam(
+            name: 'RESTART_SERVICES',
+            defaultValue: false,
+            description: '重启服务（重新读取 .env 文件，适用于配置变更）'
+        )
+        booleanParam(
+            name: 'RESET_DATABASE',
+            defaultValue: false,
+            description: '重新初始化数据库（会删除所有数据，仅生产环境）'
+        )
     }
     
     // 阶段定义
@@ -324,9 +334,26 @@ EOF
                             
                             sh """
                                 echo "使用配置文件: ${composeFiles}"
-                                echo "启动服务..."
                                 
-                                # 使用最新构建的镜像启动服务
+                                # 如果启用重启服务，先停止现有容器（确保重新读取 .env 文件）
+                                if [ "${params.RESTART_SERVICES}" = "true" ]; then
+                                    echo "重启服务模式：停止现有容器..."
+                                    docker-compose ${composeFiles} down || true
+                                    sleep 5
+                                    echo "✓ 容器已停止"
+                                fi
+                                
+                                # 如果启用重置数据库，删除数据卷（仅生产环境）
+                                if [ "${params.RESET_DATABASE}" = "true" ] && [ "${deployEnv}" = "production" ]; then
+                                    echo "⚠ 警告: 重新初始化数据库（删除所有数据）"
+                                    docker-compose ${composeFiles} down || true
+                                    docker volume rm luxury-mall_postgres_data 2>/dev/null || true
+                                    echo "✓ 数据卷已删除"
+                                    sleep 3
+                                fi
+                                
+                                # 启动服务
+                                echo "启动服务..."
                                 docker-compose ${composeFiles} up -d --build
                                 
                                 echo "等待服务启动..."
@@ -334,6 +361,33 @@ EOF
                                 
                                 echo "检查服务状态..."
                                 docker-compose ${composeFiles} ps
+                                
+                                # 验证环境变量（检查密码格式，仅生产环境）
+                                if [ "${deployEnv}" = "production" ]; then
+                                    echo ""
+                                    echo "验证环境变量格式..."
+                                    if docker ps | grep -q luxury-mall-backend; then
+                                        DB_PASS=\$(docker exec luxury-mall-backend printenv DB_PASSWORD 2>/dev/null || echo "")
+                                        if [ -n "\$DB_PASS" ]; then
+                                            if [[ "\$DB_PASS" == :* ]]; then
+                                                echo "⚠ 警告: 后端密码仍有冒号前缀: \${DB_PASS:0:20}..."
+                                            else
+                                                echo "✓ 后端密码格式正确"
+                                            fi
+                                        fi
+                                    fi
+                                    
+                                    if docker ps | grep -q luxury-mall-postgres; then
+                                        PG_PASS=\$(docker exec luxury-mall-postgres printenv POSTGRES_PASSWORD 2>/dev/null || echo "")
+                                        if [ -n "\$PG_PASS" ]; then
+                                            if [[ "\$PG_PASS" == :* ]]; then
+                                                echo "⚠ 警告: 数据库密码仍有冒号前缀: \${PG_PASS:0:20}..."
+                                            else
+                                                echo "✓ 数据库密码格式正确"
+                                            fi
+                                        fi
+                                    fi
+                                fi
                             """
                         }
                     }
