@@ -25,6 +25,7 @@ services:
 
   # 后端服务
   backend:
+    image: luxury-mall-backend:latest
     build:
       context: ./luxury-mall-backend
       dockerfile: Dockerfile
@@ -60,6 +61,7 @@ services:
 
   # 前端服务
   frontend:
+    image: luxury-mall-frontend:latest
     build:
       context: ./luxury-mall-frontend
       dockerfile: Dockerfile

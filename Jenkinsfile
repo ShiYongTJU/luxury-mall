@@ -268,6 +268,26 @@ pipeline {
                     // 切换到项目目录
                     dir("${PROJECT_DIR}") {
                         script {
+                            // 同步代码到部署目录（确保使用最新代码）
+                            sh """
+                                echo "同步代码到部署目录..."
+                                echo "当前分支: ${GIT_BRANCH}"
+                                echo "当前提交: ${GIT_COMMIT_SHORT}"
+                                
+                                # 检查是否是 Git 仓库
+                                if [ -d .git ]; then
+                                    echo "更新代码..."
+                                    git fetch origin || true
+                                    git reset --hard origin/${GIT_BRANCH} || git reset --hard HEAD || true
+                                    git clean -fd || true
+                                    echo "✓ 代码已同步"
+                                    echo "当前提交: \$(git rev-parse --short HEAD)"
+                                else
+                                    echo "⚠ 警告: 部署目录不是 Git 仓库，跳过代码同步"
+                                    echo "建议: 确保部署目录的代码是最新的"
+                                fi
+                            """
+                            
                             // 创建 .env 文件（仅生产环境需要）
                             if (deployEnv == 'production') {
                                 sh """
@@ -338,9 +358,35 @@ EOF
                                     sleep 3
                                 fi
                                 
-                                # 启动服务
-                                echo "启动服务..."
-                                docker-compose ${composeFiles} up -d --build
+                                # 启动服务（使用 Jenkins 构建的镜像，不重新构建）
+                                echo "启动服务（使用已构建的镜像）..."
+                                echo "后端镜像: luxury-mall-backend:latest"
+                                echo "前端镜像: luxury-mall-frontend:latest"
+                                
+                                # 验证镜像是否存在
+                                BACKEND_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-backend.*latest" || echo "0")
+                                FRONTEND_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-frontend.*latest" || echo "0")
+                                
+                                if [ "\$BACKEND_IMAGE_EXISTS" -eq "0" ]; then
+                                    echo "⚠ 警告: luxury-mall-backend:latest 镜像不存在，将重新构建"
+                                else
+                                    echo "✓ 后端镜像存在: luxury-mall-backend:latest"
+                                fi
+                                
+                                if [ "\$FRONTEND_IMAGE_EXISTS" -eq "0" ]; then
+                                    echo "⚠ 警告: luxury-mall-frontend:latest 镜像不存在，将重新构建"
+                                else
+                                    echo "✓ 前端镜像存在: luxury-mall-frontend:latest"
+                                fi
+                                
+                                # 如果镜像都存在，使用 --no-build；否则使用 --build
+                                if [ "\$BACKEND_IMAGE_EXISTS" -gt "0" ] && [ "\$FRONTEND_IMAGE_EXISTS" -gt "0" ]; then
+                                    echo "使用已构建的镜像启动服务..."
+                                    docker-compose ${composeFiles} up -d --no-build
+                                else
+                                    echo "部分镜像不存在，重新构建缺失的镜像..."
+                                    docker-compose ${composeFiles} up -d --build
+                                fi
                                 
                                 echo "等待服务启动..."
                                 sleep 20
