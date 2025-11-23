@@ -637,10 +637,12 @@ export async function getHomePageData(): Promise<HomePageData> {
         break
         
       case 'groupbuy':
-        // 团购：查询 tag = 'groupbuy' 的商品（统一后的标准 tag）
+        // 团购：查询包含团购相关 tag 的商品
+        // 支持配置 tag，如果没有配置则使用 LIKE 匹配 '团购' 相关的 tag
         const groupbuyLimit = componentConfig.limit || 10
         const groupbuyTag = componentConfig.tag // 允许通过配置指定 tag
         if (groupbuyTag) {
+          // 如果配置了 tag，精确匹配
           productsQuery = `
             SELECT * FROM products 
             WHERE tag = $1
@@ -649,9 +651,10 @@ export async function getHomePageData(): Promise<HomePageData> {
           `
           queryParams = [groupbuyTag, groupbuyLimit]
         } else {
+          // 如果没有配置 tag，使用 LIKE 匹配包含 '团购' 的 tag
           productsQuery = `
             SELECT * FROM products 
-            WHERE tag = 'groupbuy'
+            WHERE tag LIKE '%团购%' OR tag = 'groupbuy'
             ORDER BY create_time DESC
             LIMIT $1
           `
@@ -734,7 +737,24 @@ export async function getHomePageData(): Promise<HomePageData> {
       })
     } else if (componentType === 'seckill') {
       // 秒杀组件需要特殊格式：{ endTime, products }
-      const endTime = componentConfig.endTime || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 默认24小时后结束
+      // 确保 endTime 是有效的 ISO 字符串
+      let endTime: string
+      if (componentConfig.endTime) {
+        // 如果配置中有 endTime，验证格式
+        const endTimeDate = new Date(componentConfig.endTime)
+        if (isNaN(endTimeDate.getTime())) {
+          // 无效日期，使用默认值
+          endTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        } else {
+          endTime = endTimeDate.toISOString()
+        }
+      } else {
+        // 默认24小时后结束
+        endTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      }
+      
+      const products = productsResult.rows.map(mapProduct).filter(p => p !== null && p !== undefined)
+      
       components.push({
         type: 'seckill',
         id: componentId,
@@ -744,7 +764,7 @@ export async function getHomePageData(): Promise<HomePageData> {
         },
         data: {
           endTime: endTime,
-          products: productsResult.rows.map(mapProduct)
+          products: products
         }
       })
     } else {

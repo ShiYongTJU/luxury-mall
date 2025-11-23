@@ -34,8 +34,19 @@ const Home = () => {
   }
 
   const renderComponent = (component: PageComponent) => {
+    // 防御性检查：确保 component 和 data 存在
+    if (!component || !component.data) {
+      console.warn(`组件 ${component?.id || 'unknown'} 数据缺失，跳过渲染`)
+      return null
+    }
+
     switch (component.type) {
       case 'carousel':
+        // 确保 data 是数组
+        if (!Array.isArray(component.data)) {
+          console.warn(`轮播图组件 ${component.id} 数据格式错误，期望数组`)
+          return null
+        }
         return (
           <Carousel
             key={component.id}
@@ -44,16 +55,31 @@ const Home = () => {
           />
         )
       case 'seckill':
+        // 确保 data 是对象，且包含 endTime 和 products
+        if (typeof component.data !== 'object' || Array.isArray(component.data)) {
+          console.warn(`秒杀组件 ${component.id} 数据格式错误，期望对象 { endTime, products }`)
+          return null
+        }
+        const seckillData = component.data as { endTime?: string; products?: Product[] }
+        if (!seckillData.endTime || !Array.isArray(seckillData.products)) {
+          console.warn(`秒杀组件 ${component.id} 数据不完整，缺少 endTime 或 products`)
+          return null
+        }
         return (
           <Seckill
             key={component.id}
             title={component.config.title || '限时秒杀'}
-            endTime={component.data.endTime}
-            products={component.data.products}
+            endTime={seckillData.endTime}
+            products={seckillData.products}
             onProductClick={handleProductClick}
           />
         )
       case 'groupbuy':
+        // 确保 data 是数组
+        if (!Array.isArray(component.data)) {
+          console.warn(`团购组件 ${component.id} 数据格式错误，期望数组`)
+          return null
+        }
         return (
           <GroupBuy
             key={component.id}
@@ -63,6 +89,11 @@ const Home = () => {
           />
         )
       case 'productList':
+        // 确保 data 是数组
+        if (!Array.isArray(component.data)) {
+          console.warn(`商品列表组件 ${component.id} 数据格式错误，期望数组`)
+          return null
+        }
         return (
           <ProductList
             key={component.id}
@@ -73,6 +104,11 @@ const Home = () => {
           />
         )
       case 'guessYouLike':
+        // 确保 data 是数组
+        if (!Array.isArray(component.data)) {
+          console.warn(`猜你喜欢组件 ${component.id} 数据格式错误，期望数组`)
+          return null
+        }
         return (
           <GuessYouLike
             key={component.id}
@@ -82,6 +118,7 @@ const Home = () => {
           />
         )
       default:
+        console.warn(`未知的组件类型: ${component.type}`)
         return null
     }
   }
