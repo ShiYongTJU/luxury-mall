@@ -60,7 +60,7 @@ pipeline {
     parameters {
         choice(
             name: 'DEPLOY_ENV_OVERRIDE',
-            choices: ['auto', 'production', 'development'],
+            choices: ['production', 'auto', 'development'],
             description: '部署环境（auto 表示根据分支自动判断）'
         )
         booleanParam(
