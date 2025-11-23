@@ -272,7 +272,7 @@ pipeline {
                                 # 检查是否是 Git 仓库
                                 if [ -d .git ]; then
                                     echo "更新代码..."
-                                    git pull || true
+                                    git pull origin master|| true
                                     git clean -fd || true
                                     echo "✓ 代码已同步"
                                     echo "当前提交: \$(git rev-parse --short HEAD)"
