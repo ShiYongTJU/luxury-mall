@@ -2,11 +2,6 @@
 # 使用 Node.js 18 作为基础镜像
 FROM node:18-alpine AS builder
 
-# 设置时区为 Asia/Shanghai (CST, UTC+8)
-RUN apk add --no-cache tzdata && \
-    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo "Asia/Shanghai" > /etc/timezone
-
 # 设置工作目录
 WORKDIR /app
 
@@ -24,12 +19,6 @@ RUN npm run build
 
 # 生产环境镜像
 FROM nginx:alpine
-
-# 设置时区为 Asia/Shanghai (CST, UTC+8)
-RUN apk add --no-cache tzdata && \
-    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo "Asia/Shanghai" > /etc/timezone && \
-    apk del tzdata
 
 # 复制构建产物到 nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
