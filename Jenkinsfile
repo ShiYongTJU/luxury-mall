@@ -20,8 +20,8 @@ pipeline {
         GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
         GIT_BRANCH = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
         
-        // 部署环境（根据分支自动判断，将在 stage 中动态设置）
-        DEPLOY_ENV = 'development'
+        // 部署环境（根据分支自动判断）
+        DEPLOY_ENV = "${env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'master' ? 'production' : 'development'}"
         
         // 从 Jenkins 凭据读取敏感信息
         // 注意：凭据 ID 需要在 Jenkins 中预先配置
@@ -132,58 +132,62 @@ pipeline {
         
         // 阶段 2: 代码质量检查
         stage('Code Quality') {
-            when {
-                anyOf {
-                    expression { params.BUILD_BACKEND == true }
-                    expression { params.BUILD_FRONTEND == true }
-                }
-            }
-            steps {
-                script {
-                    echo "=========================================="
-                    echo "阶段 2: 代码质量检查"
-                    echo "=========================================="
-                    
-                    // 后端类型检查
-                    if (params.BUILD_BACKEND == true) {
-                        echo "检查后端代码质量..."
+            parallel {
+                stage('Backend Type Check') {
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 2.1: 后端 TypeScript 类型检查"
+                            echo "=========================================="
+                        }
+                        
                         dir('luxury-mall-backend') {
-                            try {
-                                sh '''
-                                    echo "安装后端依赖..."
-                                    npm ci
-                                    
-                                    echo "执行 TypeScript 类型检查..."
-                                    npm run type-check
-                                    
-                                    echo "✓ 后端类型检查通过"
-                                '''
-                            } catch (e) {
-                                echo "⚠ 后端类型检查失败: ${e}"
-                                echo "继续构建，但请检查类型错误"
-                                // 不中断构建，仅警告
+                            script {
+                                try {
+                                    sh '''
+                                        echo "安装后端依赖..."
+                                        npm ci
+                                        
+                                        echo "执行 TypeScript 类型检查..."
+                                        npm run type-check
+                                        
+                                        echo "✓ 后端类型检查通过"
+                                    '''
+                                } catch (e) {
+                                    echo "⚠ 后端类型检查失败: ${e}"
+                                    echo "继续构建，但请检查类型错误"
+                                    // 不中断构建，仅警告
+                                }
                             }
                         }
                     }
-                    
-                    // 前端类型检查
-                    if (params.BUILD_FRONTEND == true) {
-                        echo "检查前端代码质量..."
+                }
+                
+                stage('Frontend Type Check') {
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 2.2: 前端 TypeScript 类型检查"
+                            echo "=========================================="
+                        }
+                        
                         dir('luxury-mall-frontend') {
-                            try {
-                                sh '''
-                                    echo "安装前端依赖..."
-                                    npm ci
-                                    
-                                    echo "执行 TypeScript 类型检查..."
-                                    npx tsc --noEmit
-                                    
-                                    echo "✓ 前端类型检查通过"
-                                '''
-                            } catch (e) {
-                                echo "⚠ 前端类型检查失败: ${e}"
-                                echo "继续构建，但请检查类型错误"
-                                // 不中断构建，仅警告
+                            script {
+                                try {
+                                    sh '''
+                                        echo "安装前端依赖..."
+                                        npm ci
+                                        
+                                        echo "执行 TypeScript 类型检查..."
+                                        npx tsc --noEmit
+                                        
+                                        echo "✓ 前端类型检查通过"
+                                    '''
+                                } catch (e) {
+                                    echo "⚠ 前端类型检查失败: ${e}"
+                                    echo "继续构建，但请检查类型错误"
+                                    // 不中断构建，仅警告
+                                }
                             }
                         }
                     }
@@ -193,82 +197,107 @@ pipeline {
         
         // 阶段 3: 构建 Docker 镜像
         stage('Build Docker Images') {
-            when {
-                anyOf {
-                    expression { params.BUILD_BACKEND == true }
-                    expression { params.BUILD_FRONTEND == true }
-                    expression { params.BUILD_PORTFOLIO == true }
-                }
-            }
-            steps {
-                script {
-                    echo "=========================================="
-                    echo "阶段 3: 构建 Docker 镜像"
-                    echo "=========================================="
-                    
-                    // 构建后端镜像
-                    if (params.BUILD_BACKEND == true) {
-                        echo "构建后端镜像..."
+            parallel {
+                stage('Build Backend Image') {
+                    when {
+                        expression { params.BUILD_BACKEND == true }
+                    }
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 3.1: 构建后端 Docker 镜像"
+                            echo "=========================================="
+                        }
+                        
                         dir('luxury-mall-backend') {
-                            sh """
-                                echo "构建后端镜像: luxury-mall-backend:${IMAGE_TAG}"
-                                echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
-                                echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
-                                
-                                docker build --no-cache -t luxury-mall-backend:${IMAGE_TAG} .
-                                docker tag luxury-mall-backend:${IMAGE_TAG} luxury-mall-backend:latest
-                                
-                                echo "✓ 后端镜像构建完成"
-                                echo "镜像信息:"
-                                docker images luxury-mall-backend:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
-                                docker images luxury-mall-backend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
-                            """
+                            script {
+                                sh """
+                                    echo "构建后端镜像: luxury-mall-backend:${IMAGE_TAG}"
+                                    echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
+                                    echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
+                                    
+                                    # 使用 --no-cache 强制重新构建，确保使用最新代码
+                                    docker build --no-cache -t luxury-mall-backend:${IMAGE_TAG} .
+                                    docker tag luxury-mall-backend:${IMAGE_TAG} luxury-mall-backend:latest
+                                    
+                                    echo "✓ 后端镜像构建完成"
+                                    echo "镜像信息:"
+                                    docker images luxury-mall-backend:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    docker images luxury-mall-backend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                """
+                            }
                         }
                     }
-                    
-                    // 构建前端镜像
-                    if (params.BUILD_FRONTEND == true) {
-                        echo "构建前端镜像..."
+                }
+                
+                stage('Build Frontend Image') {
+                    when {
+                        expression { params.BUILD_FRONTEND == true }
+                    }
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 3.2: 构建前端 Docker 镜像"
+                            echo "=========================================="
+                        }
+                        
                         dir('luxury-mall-frontend') {
-                            sh """
-                                echo "构建前端镜像: luxury-mall-frontend:${IMAGE_TAG}"
-                                echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
-                                echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
-                                
-                                docker build --no-cache -t luxury-mall-frontend:${IMAGE_TAG} .
-                                docker tag luxury-mall-frontend:${IMAGE_TAG} luxury-mall-frontend:latest
-                                
-                                echo "✓ 前端镜像构建完成"
-                                echo "镜像信息:"
-                                docker images luxury-mall-frontend:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
-                                docker images luxury-mall-frontend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
-                                
-                                echo "验证镜像内的文件时间戳:"
-                                docker run --rm luxury-mall-frontend:latest ls -lth /usr/share/nginx/html | head -5 || true
-                            """
+                            script {
+                                sh """
+                                    echo "构建前端镜像: luxury-mall-frontend:${IMAGE_TAG}"
+                                    echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
+                                    echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
+                                    
+                                    # 使用 --no-cache 强制重新构建，确保使用最新代码
+                                    docker build --no-cache -t luxury-mall-frontend:${IMAGE_TAG} .
+                                    docker tag luxury-mall-frontend:${IMAGE_TAG} luxury-mall-frontend:latest
+                                    
+                                    echo "✓ 前端镜像构建完成"
+                                    echo "镜像信息:"
+                                    docker images luxury-mall-frontend:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    docker images luxury-mall-frontend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    
+                                    # 验证镜像内的文件时间戳
+                                    echo "验证镜像内的文件时间戳:"
+                                    docker run --rm luxury-mall-frontend:latest ls -lth /usr/share/nginx/html | head -5 || true
+                                """
+                            }
                         }
                     }
-                    
-                    // 构建 Portfolio 镜像
-                    if (params.BUILD_PORTFOLIO == true) {
-                        echo "构建 Portfolio 镜像..."
+                }
+                
+                stage('Build Portfolio Image') {
+                    when {
+                        expression { params.BUILD_PORTFOLIO == true }
+                    }
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 3.3: 构建 Programmer Portfolio Docker 镜像"
+                            echo "=========================================="
+                        }
+                        
                         dir('programmer-portfolio') {
-                            sh """
-                                echo "构建 Portfolio 镜像: programmer-portfolio:${IMAGE_TAG}"
-                                echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
-                                echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
-                                
-                                docker build --no-cache -t programmer-portfolio:${IMAGE_TAG} .
-                                docker tag programmer-portfolio:${IMAGE_TAG} programmer-portfolio:latest
-                                
-                                echo "✓ Portfolio 镜像构建完成"
-                                echo "镜像信息:"
-                                docker images programmer-portfolio:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
-                                docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
-                                
-                                echo "验证镜像内的文件时间戳:"
-                                docker run --rm programmer-portfolio:latest ls -lth /usr/share/nginx/html | head -5 || true
-                            """
+                            script {
+                                sh """
+                                    echo "构建 Portfolio 镜像: programmer-portfolio:${IMAGE_TAG}"
+                                    echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
+                                    echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
+                                    
+                                    # 使用 --no-cache 强制重新构建，确保使用最新代码
+                                    docker build --no-cache -t programmer-portfolio:${IMAGE_TAG} .
+                                    docker tag programmer-portfolio:${IMAGE_TAG} programmer-portfolio:latest
+                                    
+                                    echo "✓ Portfolio 镜像构建完成"
+                                    echo "镜像信息:"
+                                    docker images programmer-portfolio:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    
+                                    # 验证镜像内的文件时间戳
+                                    echo "验证镜像内的文件时间戳:"
+                                    docker run --rm programmer-portfolio:latest ls -lth /usr/share/nginx/html | head -5 || true
+                                """
+                            }
                         }
                     }
                 }
@@ -278,78 +307,13 @@ pipeline {
         // 阶段 4: 运行测试（可选）
         stage('Tests') {
             when {
-                allOf {
-                    expression { !params.SKIP_TESTS }
-                    anyOf {
-                        expression { params.BUILD_BACKEND == true }
-                        expression { params.BUILD_FRONTEND == true }
-                        expression { params.BUILD_PORTFOLIO == true }
-                    }
-                }
+                expression { !params.SKIP_TESTS }
             }
             steps {
                 script {
                     echo "=========================================="
                     echo "阶段 4: 运行测试"
                     echo "=========================================="
-                    
-                    // 后端测试
-                    if (params.BUILD_BACKEND == true) {
-                        echo "运行后端测试..."
-                        dir('luxury-mall-backend') {
-                            try {
-                                sh '''
-                                    echo "安装后端依赖..."
-                                    npm ci
-                                    
-                                    echo "运行后端测试..."
-                                    npm test || echo "⚠ 后端测试未配置或测试失败，继续构建"
-                                '''
-                            } catch (e) {
-                                echo "⚠ 后端测试失败: ${e}"
-                                echo "继续构建，但请检查测试错误"
-                            }
-                        }
-                    }
-                    
-                    // 前端测试
-                    if (params.BUILD_FRONTEND == true) {
-                        echo "运行前端测试..."
-                        dir('luxury-mall-frontend') {
-                            try {
-                                sh '''
-                                    echo "安装前端依赖..."
-                                    npm ci
-                                    
-                                    echo "运行前端测试..."
-                                    npm test || echo "⚠ 前端测试未配置或测试失败，继续构建"
-                                '''
-                            } catch (e) {
-                                echo "⚠ 前端测试失败: ${e}"
-                                echo "继续构建，但请检查测试错误"
-                            }
-                        }
-                    }
-                    
-                    // Portfolio 测试
-                    if (params.BUILD_PORTFOLIO == true) {
-                        echo "运行 Portfolio 测试..."
-                        dir('programmer-portfolio') {
-                            try {
-                                sh '''
-                                    echo "安装 Portfolio 依赖..."
-                                    npm ci
-                                    
-                                    echo "运行 Portfolio 测试..."
-                                    npm test || echo "⚠ Portfolio 测试未配置或测试失败，继续构建"
-                                '''
-                            } catch (e) {
-                                echo "⚠ Portfolio 测试失败: ${e}"
-                                echo "继续构建，但请检查测试错误"
-                            }
-                        }
-                    }
-                    
                     echo "当前项目未配置自动化测试"
                     echo "如需添加测试，请在此阶段添加测试命令"
                     echo "例如: npm test"
@@ -357,34 +321,30 @@ pipeline {
             }
         }
         
-        // 阶段 5: 部署项目
-        stage('Deploy Projects') {
+        // 阶段 5: 部署 Luxury Mall 项目
+        stage('Deploy Luxury Mall') {
             when {
                 anyOf {
                     expression { params.BUILD_BACKEND == true }
                     expression { params.BUILD_FRONTEND == true }
-                    expression { params.BUILD_PORTFOLIO == true }
                 }
             }
             steps {
                 script {
+                    echo "=========================================="
+                    echo "阶段 5: 部署到 ${DEPLOY_ENV} 环境"
+                    echo "=========================================="
+                    
                     // 确定部署环境
                     def deployEnv = params.DEPLOY_ENV_OVERRIDE == 'auto' ? 
-                        (env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'master' ? 'production' : 'development') : 
-                        params.DEPLOY_ENV_OVERRIDE
+                        DEPLOY_ENV : params.DEPLOY_ENV_OVERRIDE
                     
-                    echo "=========================================="
-                    echo "阶段 5: 部署项目到 ${deployEnv} 环境"
-                    echo "=========================================="
                     echo "部署环境: ${deployEnv}"
+                    echo "项目目录: ${PROJECT_DIR}"
+                    echo "Jenkins Workspace: ${env.WORKSPACE}"
                     
-                    // 部署 Luxury Mall 项目（后端和/或前端）
-                    if (params.BUILD_BACKEND == true || params.BUILD_FRONTEND == true) {
-                        echo "部署 Luxury Mall 项目..."
-                        echo "项目目录: ${PROJECT_DIR}"
-                        echo "Jenkins Workspace: ${env.WORKSPACE}"
-                        
-                        // 从 Jenkins workspace 同步代码到部署目录
+                    // 从 Jenkins workspace 同步代码到部署目录
+                    script {
                         sh """
                             echo "=========================================="
                             echo "同步代码到部署目录..."
@@ -457,11 +417,13 @@ pipeline {
                             echo "部署目录提交: \$(cd ${PROJECT_DIR} && git rev-parse --short HEAD 2>/dev/null || echo 'N/A (not a git repo)')"
                             echo "=========================================="
                         """
-                        
-                        // 切换到项目目录
-                        dir("${PROJECT_DIR}") {
-                            script {
-                                // 创建 .env 文件（仅生产环境需要）
+                    }
+                    
+                    // 切换到项目目录
+                    dir("${PROJECT_DIR}") {
+                        script {
+                            
+                            // 创建 .env 文件（仅生产环境需要）
                             if (deployEnv == 'production') {
                                 sh """
                                     echo "创建 .env 文件..."
@@ -658,14 +620,24 @@ EOF
                     }
                 }
             }
-            
-                    // 部署 Portfolio 项目
-                    if (params.BUILD_PORTFOLIO == true) {
-                        echo "部署 Programmer Portfolio..."
-                        echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
-                        echo "Jenkins Workspace: ${env.WORKSPACE}"
-                        
-                        // 从 Jenkins workspace 同步代码到部署目录
+        }
+        
+        // 阶段 6: 部署 Programmer Portfolio
+        stage('Deploy Portfolio') {
+            when {
+                expression { params.BUILD_PORTFOLIO == true }
+            }
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 6: 部署 Programmer Portfolio"
+                    echo "=========================================="
+                    echo "部署环境: ${DEPLOY_ENV}"
+                    echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
+                    echo "Jenkins Workspace: ${env.WORKSPACE}"
+                    
+                    // 从 Jenkins workspace 同步代码到部署目录
+                    script {
                         sh """
                             echo "=========================================="
                             echo "同步 Portfolio 代码到部署目录..."
@@ -713,84 +685,84 @@ EOF
                             ls -la ${PORTFOLIO_PROJECT_DIR} | head -10
                             echo "=========================================="
                         """
-                
-                        // 切换到项目目录
-                        dir("${PORTFOLIO_PROJECT_DIR}") {
-                            script {
-                                // 清理旧容器和镜像（如果启用，只清理 Portfolio）
-                                if (params.CLEAN_BUILD) {
-                                    sh '''
-                                        echo "清理旧的 Portfolio 容器和镜像..."
-                                        docker-compose -f docker-compose.yml down || true
-                                        
-                                        # 清理未使用的镜像（保留最近 3 个版本）
-                                        docker image prune -f || true
-                                        
-                                        echo "✓ 清理完成"
-                                    '''
-                                }
-                                
-                                // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
-                                sh """
-                                    echo "启动 Portfolio 服务（使用已构建的镜像）..."
-                                    echo "Portfolio 镜像: programmer-portfolio:latest"
-                                    
-                                    # 验证镜像是否存在
-                                    PORTFOLIO_IMAGE_EXISTS=\$(docker images | grep -c "programmer-portfolio.*latest" || echo "0")
-                                    
-                                    if [ "\$PORTFOLIO_IMAGE_EXISTS" -eq "0" ]; then
-                                        echo "⚠ 警告: programmer-portfolio:latest 镜像不存在，将重新构建"
-                                    else
-                                        echo "✓ Portfolio 镜像存在: programmer-portfolio:latest"
-                                        echo "Portfolio 镜像详细信息:"
-                                        docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
-                                    fi
-                                    
-                                    # 停止并删除现有容器（确保使用新镜像）
-                                    echo "停止现有容器..."
+                    }
+                    
+                    // 切换到项目目录
+                    dir("${PORTFOLIO_PROJECT_DIR}") {
+                        script {
+                            // 清理旧容器和镜像（如果启用，只清理 Portfolio）
+                            if (params.CLEAN_BUILD) {
+                                sh '''
+                                    echo "清理旧的 Portfolio 容器和镜像..."
                                     docker-compose -f docker-compose.yml down || true
-                                    sleep 3
                                     
-                                    # 如果镜像存在，使用 --no-build 并强制重新创建；否则使用 --build
-                                    if [ "\$PORTFOLIO_IMAGE_EXISTS" -gt "0" ]; then
-                                        echo "使用已构建的镜像启动服务（强制重新创建容器）..."
-                                        docker-compose -f docker-compose.yml up -d --no-build --force-recreate
-                                    else
-                                        echo "镜像不存在，重新构建镜像..."
-                                        docker-compose -f docker-compose.yml up -d --build --force-recreate
-                                    fi
+                                    # 清理未使用的镜像（保留最近 3 个版本）
+                                    docker image prune -f || true
                                     
-                                    echo "等待服务启动..."
-                                    sleep 10
-                                    
-                                    echo "检查服务状态..."
-                                    docker-compose -f docker-compose.yml ps
-                                    
-                                    # 验证容器使用的镜像
-                                    echo ""
-                                    echo "=========================================="
-                                    echo "验证容器使用的镜像:"
-                                    echo "=========================================="
-                                    docker-compose -f docker-compose.yml ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose -f docker-compose.yml ps
-                                    
-                                    # 检查 Portfolio 容器使用的镜像 ID
-                                    echo ""
-                                    echo "Portfolio 容器详细信息:"
-                                    PORTFOLIO_CONTAINER_ID=\$(docker-compose -f docker-compose.yml ps -q portfolio)
-                                    if [ -n "\$PORTFOLIO_CONTAINER_ID" ]; then
-                                        echo "容器 ID: \$PORTFOLIO_CONTAINER_ID"
-                                        echo "容器使用的镜像 ID:"
-                                        docker inspect \$PORTFOLIO_CONTAINER_ID --format='{{.Image}}' || true
-                                        echo "latest 标签指向的镜像 ID:"
-                                        docker images programmer-portfolio:latest --format='{{.ID}}' || true
-                                        echo "容器内文件时间戳:"
-                                        docker exec \$PORTFOLIO_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
-                                    else
-                                        echo "⚠ 警告: Portfolio 容器未找到"
-                                    fi
-                                    echo "=========================================="
-                                """
+                                    echo "✓ 清理完成"
+                                '''
                             }
+                            
+                            // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
+                            sh """
+                                echo "启动 Portfolio 服务（使用已构建的镜像）..."
+                                echo "Portfolio 镜像: programmer-portfolio:latest"
+                                
+                                # 验证镜像是否存在
+                                PORTFOLIO_IMAGE_EXISTS=\$(docker images | grep -c "programmer-portfolio.*latest" || echo "0")
+                                
+                                if [ "\$PORTFOLIO_IMAGE_EXISTS" -eq "0" ]; then
+                                    echo "⚠ 警告: programmer-portfolio:latest 镜像不存在，将重新构建"
+                                else
+                                    echo "✓ Portfolio 镜像存在: programmer-portfolio:latest"
+                                    echo "Portfolio 镜像详细信息:"
+                                    docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
+                                fi
+                                
+                                # 停止并删除现有容器（确保使用新镜像）
+                                echo "停止现有容器..."
+                                docker-compose -f docker-compose.yml down || true
+                                sleep 3
+                                
+                                # 如果镜像存在，使用 --no-build 并强制重新创建；否则使用 --build
+                                if [ "\$PORTFOLIO_IMAGE_EXISTS" -gt "0" ]; then
+                                    echo "使用已构建的镜像启动服务（强制重新创建容器）..."
+                                    docker-compose -f docker-compose.yml up -d --no-build --force-recreate
+                                else
+                                    echo "镜像不存在，重新构建镜像..."
+                                    docker-compose -f docker-compose.yml up -d --build --force-recreate
+                                fi
+                                
+                                echo "等待服务启动..."
+                                sleep 10
+                                
+                                echo "检查服务状态..."
+                                docker-compose -f docker-compose.yml ps
+                                
+                                # 验证容器使用的镜像
+                                echo ""
+                                echo "=========================================="
+                                echo "验证容器使用的镜像:"
+                                echo "=========================================="
+                                docker-compose -f docker-compose.yml ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose -f docker-compose.yml ps
+                                
+                                # 检查 Portfolio 容器使用的镜像 ID
+                                echo ""
+                                echo "Portfolio 容器详细信息:"
+                                PORTFOLIO_CONTAINER_ID=\$(docker-compose -f docker-compose.yml ps -q portfolio)
+                                if [ -n "\$PORTFOLIO_CONTAINER_ID" ]; then
+                                    echo "容器 ID: \$PORTFOLIO_CONTAINER_ID"
+                                    echo "容器使用的镜像 ID:"
+                                    docker inspect \$PORTFOLIO_CONTAINER_ID --format='{{.Image}}' || true
+                                    echo "latest 标签指向的镜像 ID:"
+                                    docker images programmer-portfolio:latest --format='{{.ID}}' || true
+                                    echo "容器内文件时间戳:"
+                                    docker exec \$PORTFOLIO_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
+                                else
+                                    echo "⚠ 警告: Portfolio 容器未找到"
+                                fi
+                                echo "=========================================="
+                            """
                         }
                     }
                 }
