@@ -83,21 +83,18 @@ pipeline {
             defaultValue: false,
             description: '重新初始化数据库（会删除所有数据，仅生产环境）'
         )
-        // 项目选择多选框
-        booleanParam(
-            name: 'BUILD_BACKEND',
-            defaultValue: false,
-            description: '构建并部署 Luxury Mall 后端项目'
-        )
-        booleanParam(
-            name: 'BUILD_FRONTEND',
-            defaultValue: false,
-            description: '构建并部署 Luxury Mall 前端项目'
-        )
-        booleanParam(
-            name: 'BUILD_PORTFOLIO',
-            defaultValue: false,
-            description: '构建并部署 Programmer Portfolio 项目'
+        // 项目选择多选框（使用 Active Choices）
+        activeChoiceReactiveParam(
+            name: 'BUILD_PROJECTS',
+            description: '选择要构建和部署的项目（可多选）',
+            choiceType: 'CHECKBOX',
+            groovyScript: '''
+                return [
+                    'luxury-mall-backend:Luxury Mall 后端',
+                    'luxury-mall-frontend:Luxury Mall 前端',
+                    'programmer-portfolio:Programmer Portfolio'
+                ]
+            '''
         )
     }
     
@@ -200,7 +197,10 @@ pipeline {
             parallel {
                 stage('Build Backend Image') {
                     when {
-                        expression { params.BUILD_BACKEND == true }
+                        expression { 
+                            params.BUILD_PROJECTS != null && 
+                            params.BUILD_PROJECTS.contains('luxury-mall-backend') 
+                        }
                     }
                     steps {
                         script {
@@ -232,7 +232,10 @@ pipeline {
                 
                 stage('Build Frontend Image') {
                     when {
-                        expression { params.BUILD_FRONTEND == true }
+                        expression { 
+                            params.BUILD_PROJECTS != null && 
+                            params.BUILD_PROJECTS.contains('luxury-mall-frontend') 
+                        }
                     }
                     steps {
                         script {
@@ -268,7 +271,10 @@ pipeline {
                 
                 stage('Build Portfolio Image') {
                     when {
-                        expression { params.BUILD_PORTFOLIO == true }
+                        expression { 
+                            params.BUILD_PROJECTS != null && 
+                            params.BUILD_PROJECTS.contains('programmer-portfolio') 
+                        }
                     }
                     steps {
                         script {
@@ -324,9 +330,11 @@ pipeline {
         // 阶段 5: 部署 Luxury Mall 项目
         stage('Deploy Luxury Mall') {
             when {
-                anyOf {
-                    expression { params.BUILD_BACKEND == true }
-                    expression { params.BUILD_FRONTEND == true }
+                expression { 
+                    params.BUILD_PROJECTS != null && (
+                        params.BUILD_PROJECTS.contains('luxury-mall-backend') ||
+                        params.BUILD_PROJECTS.contains('luxury-mall-frontend')
+                    )
                 }
             }
             steps {
@@ -497,8 +505,16 @@ EOF
                                 echo "启动服务（使用已构建的镜像）..."
                                 
                                 # 根据选中的项目决定启动哪些服务
-                                BUILD_BACKEND="${params.BUILD_BACKEND}"
-                                BUILD_FRONTEND="${params.BUILD_FRONTEND}"
+                                BUILD_BACKEND="false"
+                                BUILD_FRONTEND="false"
+                                if [ -n "${params.BUILD_PROJECTS}" ]; then
+                                    if echo "${params.BUILD_PROJECTS}" | grep -q "luxury-mall-backend"; then
+                                        BUILD_BACKEND="true"
+                                    fi
+                                    if echo "${params.BUILD_PROJECTS}" | grep -q "luxury-mall-frontend"; then
+                                        BUILD_FRONTEND="true"
+                                    fi
+                                fi
                                 
                                 # 验证镜像是否存在
                                 BACKEND_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-backend.*latest" || echo "0")
@@ -625,7 +641,10 @@ EOF
         // 阶段 6: 部署 Programmer Portfolio
         stage('Deploy Portfolio') {
             when {
-                expression { params.BUILD_PORTFOLIO == true }
+                expression { 
+                    params.BUILD_PROJECTS != null && 
+                    params.BUILD_PROJECTS.contains('programmer-portfolio') 
+                }
             }
             steps {
                 script {
