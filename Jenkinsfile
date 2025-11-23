@@ -84,10 +84,11 @@ pipeline {
             description: '重新初始化数据库（会删除所有数据，仅生产环境）'
         )
         // 项目选择多选框（使用 Active Choices）
-        activeChoiceReactiveParam(
+        activeChoice(
             name: 'BUILD_PROJECTS',
             description: '选择要构建和部署的项目（可多选）',
             choiceType: 'CHECKBOX',
+            filterable: false,
             groovyScript: '''
                 return [
                     'luxury-mall-backend:Luxury Mall 后端',
