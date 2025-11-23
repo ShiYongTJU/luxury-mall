@@ -10,57 +10,57 @@ const mock = new MockAdapter(apiClient, { delayResponse: 500 })
 
 const mockProjects = [
   {
-    id: 'nebula-dashboard',
-    title: 'Nebula Dashboard · 云原生运维驾驶舱',
+    id: 'luxury-mall-frontend',
+    title: 'Luxury Mall · 奢侈品商城前端',
     cover:
-      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
-    summary: '为 SRE 团队打造的一体化指标与告警平台，强调实时可观测性与智能告警联动。',
+      'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
+    summary: '基于 React + TypeScript 构建的现代化电商前端应用，提供完整的购物流程和用户体验。',
     description:
-      '通过 Vue 3 组合式 API + ECharts 构建 40+ 数据组件，支撑千万级指标秒级刷新，并提供可拖拽仪表盘和多云资源联动视图。',
-    tags: ['Vue 3', 'TypeScript', 'ECharts', 'WebSocket'],
-    role: '前端负责人',
-    timeline: '2024 · 企业级 SaaS',
+      '采用 React Hooks、Context API 进行状态管理，实现商品浏览、购物车、订单管理、地址管理等核心功能。支持深色模式、响应式设计，使用 Vite 构建工具优化开发体验和构建性能。',
+    tags: ['React', 'TypeScript', 'Vite', 'Context API', '深色模式'],
+    role: '前端开发',
+    timeline: '2024 · 电商项目',
     links: {
-      demo: 'https://nebula.example.com',
-      repo: 'https://github.com/example/nebula-dashboard'
+      demo: 'http://1.15.93.186:80',
+      repo: 'https://gitee.com/shikii/luxury-mall'
     }
   },
   {
-    id: 'aether-note',
-    title: 'Aether Note · AI 协作知识库',
+    id: 'luxury-mall-backend',
+    title: 'Luxury Mall · 奢侈品商城后端',
     cover:
-      'https://images.unsplash.com/photo-1508830524289-0adcbe822b40?auto=format&fit=crop&w=1200&q=80',
-    summary: '面向远程团队的轻量级文档协作工具，提供 AI 草稿与多端实时同步。',
+      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80',
+    summary: '基于 Express + TypeScript + PostgreSQL 构建的 RESTful API 服务，提供完整的电商后端功能。',
     description:
-      '利用 Vue 3 + Pinia + IndexedDB 实现离线优先编辑体验，并通过 Service Worker 进行智能缓存，三端一致性延迟小于 250ms。',
-    tags: ['Vue 3', 'Pinia', 'IndexedDB', 'PWA'],
-    role: '全栈开发',
-    timeline: '2023 · 初创项目',
+      '采用 Express 框架构建 RESTful API，使用 TypeScript 保证类型安全，PostgreSQL 存储数据。实现用户认证、商品管理、订单处理、地址管理等核心业务逻辑，支持 JWT 认证和数据库持久化。',
+    tags: ['Express', 'TypeScript', 'PostgreSQL', 'JWT', 'RESTful API'],
+    role: '后端开发',
+    timeline: '2024 · 电商项目',
     links: {
-      demo: 'https://aether.example.com',
-      repo: 'https://github.com/example/aether-note'
+      demo: 'http://1.15.93.186:3001',
+      repo: 'https://gitee.com/shikii/luxury-mall'
     }
   },
   {
-    id: 'orbit-lab',
-    title: 'Orbit Lab · XR 交互式作品集',
+    id: 'jenkins-ci-cd',
+    title: 'Jenkins CI/CD · 持续集成部署系统',
     cover:
-      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
-    summary: '强调沉浸式体验的创意作品集，支持 Web/XR 双端浏览与交互。',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
+    summary: '基于 Jenkins Pipeline 构建的自动化 CI/CD 流程，实现代码构建、测试、打包和部署的完整自动化。',
     description:
-      '基于 Three.js + VueUse 打造 3D 轨道交互，并引入可配置的主题系统与 SSR 级别的首屏优化， Lighthouse 评分 95+。',
-    tags: ['Vue 3', 'Three.js', 'VueUse', 'Vite SSR'],
-    role: '创意前端',
-    timeline: '2022 · 个人实验',
+      '使用 Jenkins Pipeline 编写 Groovy 脚本，实现多项目并行构建、Docker 镜像构建、自动化测试、代码质量检查等功能。支持多环境部署（开发/生产），集成 Docker Compose 进行容器编排，实现一键部署和回滚。',
+    tags: ['Jenkins', 'CI/CD', 'Docker', 'Pipeline', '自动化部署'],
+    role: 'DevOps 工程师',
+    timeline: '2024 · 基础设施',
     links: {
-      demo: 'https://orbit.example.com',
-      repo: 'https://github.com/example/orbit-lab'
+      demo: 'http://1.15.93.186:8080/jenkins',
+      repo: 'https://gitee.com/shikii/luxury-mall'
     }
-  }
+  },
 ]
 
 mock.onGet('/api/projects').reply(200, {
-  featured: mockProjects[0],
+  featured: mockProjects[0], // 将第一个项目（前端项目）设为重点案例
   projects: mockProjects
 })
 
