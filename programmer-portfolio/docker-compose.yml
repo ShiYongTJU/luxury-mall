@@ -9,7 +9,7 @@ services:
       dockerfile: Dockerfile
     container_name: programmer-portfolio
     ports:
-      - "8080:80"
+      - "666:80"
     restart: unless-stopped
     networks:
       - portfolio-network

@@ -714,7 +714,7 @@ EOF
                 echo "服务访问地址:"
                 echo "  前端: http://your-server-ip:80"
                 echo "  后端: http://your-server-ip:3001"
-                echo "  Portfolio: http://your-server-ip:8080"
+                echo "  Portfolio: http://your-server-ip:666"
                 echo "=========================================="
                 
                 // 发送成功通知（需要配置 Email Extension 插件）
