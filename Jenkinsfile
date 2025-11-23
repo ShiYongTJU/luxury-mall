@@ -89,13 +89,10 @@ pipeline {
             description: '选择要构建和部署的项目（可多选）',
             choiceType: 'CHECKBOX',
             filterable: false,
-            script: '''
-                return [
-                    'luxury-mall-backend:Luxury Mall 后端',
-                    'luxury-mall-frontend:Luxury Mall 前端',
-                    'programmer-portfolio:Programmer Portfolio'
-                ]
-            '''
+            script: [
+                $class: 'GroovyScript',
+                script: 'return ["luxury-mall-backend:Luxury Mall 后端", "luxury-mall-frontend:Luxury Mall 前端", "programmer-portfolio:Programmer Portfolio"]'
+            ]
         )
     }
     
