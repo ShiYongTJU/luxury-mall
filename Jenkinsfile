@@ -659,14 +659,14 @@ EOF
                 }
             }
             
-            // 部署 Portfolio 项目
-            if (params.BUILD_PORTFOLIO == true) {
-                echo "部署 Programmer Portfolio..."
-                echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
-                echo "Jenkins Workspace: ${env.WORKSPACE}"
-                
-                // 从 Jenkins workspace 同步代码到部署目录
-                sh """
+                // 部署 Portfolio 项目
+                if (params.BUILD_PORTFOLIO == true) {
+                    echo "部署 Programmer Portfolio..."
+                    echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
+                    echo "Jenkins Workspace: ${env.WORKSPACE}"
+                    
+                    // 从 Jenkins workspace 同步代码到部署目录
+                    sh """
                     echo "=========================================="
                     echo "同步 Portfolio 代码到部署目录..."
                     echo "源目录: ${env.WORKSPACE}/programmer-portfolio"
@@ -714,9 +714,9 @@ EOF
                     echo "=========================================="
                 """
                 
-                // 切换到项目目录
-                dir("${PORTFOLIO_PROJECT_DIR}") {
-                    script {
+                    // 切换到项目目录
+                    dir("${PORTFOLIO_PROJECT_DIR}") {
+                        script {
                         // 清理旧容器和镜像（如果启用，只清理 Portfolio）
                         if (params.CLEAN_BUILD) {
                             sh '''
@@ -790,9 +790,9 @@ EOF
                             fi
                             echo "=========================================="
                         """
+                        }
                     }
                 }
-            }
                 }
             }
         }
