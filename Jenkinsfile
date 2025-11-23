@@ -193,7 +193,8 @@ pipeline {
                                     echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
                                     echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
                                     
-                                    docker build -t luxury-mall-backend:${IMAGE_TAG} .
+                                    # 使用 --no-cache 强制重新构建，确保使用最新代码
+                                    docker build --no-cache -t luxury-mall-backend:${IMAGE_TAG} .
                                     docker tag luxury-mall-backend:${IMAGE_TAG} luxury-mall-backend:latest
                                     
                                     echo "✓ 后端镜像构建完成"
@@ -221,7 +222,8 @@ pipeline {
                                     echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
                                     echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
                                     
-                                    docker build -t luxury-mall-frontend:${IMAGE_TAG} .
+                                    # 使用 --no-cache 强制重新构建，确保使用最新代码
+                                    docker build --no-cache -t luxury-mall-frontend:${IMAGE_TAG} .
                                     docker tag luxury-mall-frontend:${IMAGE_TAG} luxury-mall-frontend:latest
                                     
                                     echo "✓ 前端镜像构建完成"
