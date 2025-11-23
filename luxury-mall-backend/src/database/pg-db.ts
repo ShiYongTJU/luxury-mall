@@ -611,10 +611,12 @@ export async function getHomePageData(): Promise<HomePageData> {
         break
         
       case 'seckill':
-        // 秒杀：查询 tag = 'seckill' 的商品（统一后的标准 tag）
+        // 秒杀：查询包含秒杀相关 tag 的商品
+        // 支持配置 tag，如果没有配置则使用 LIKE 匹配 '限时' 或 '秒杀' 相关的 tag
         const seckillLimit = componentConfig.limit || 10
         const seckillTag = componentConfig.tag // 允许通过配置指定 tag
         if (seckillTag) {
+          // 如果配置了 tag，精确匹配
           productsQuery = `
             SELECT * FROM products 
             WHERE tag = $1
@@ -623,9 +625,10 @@ export async function getHomePageData(): Promise<HomePageData> {
           `
           queryParams = [seckillTag, seckillLimit]
         } else {
+          // 如果没有配置 tag，使用 LIKE 匹配包含 '限时' 或 '秒杀' 的 tag
           productsQuery = `
             SELECT * FROM products 
-            WHERE tag = 'seckill'
+            WHERE tag LIKE '%限时%' OR tag LIKE '%秒杀%' OR tag = 'seckill'
             ORDER BY create_time DESC
             LIMIT $1
           `
@@ -728,6 +731,21 @@ export async function getHomePageData(): Promise<HomePageData> {
           title: row.name,
           link: `/product/${row.id}`
         }))
+      })
+    } else if (componentType === 'seckill') {
+      // 秒杀组件需要特殊格式：{ endTime, products }
+      const endTime = componentConfig.endTime || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 默认24小时后结束
+      components.push({
+        type: 'seckill',
+        id: componentId,
+        config: {
+          title: componentTitle,
+          ...componentConfig
+        },
+        data: {
+          endTime: endTime,
+          products: productsResult.rows.map(mapProduct)
+        }
       })
     } else {
       components.push({
