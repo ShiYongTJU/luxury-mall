@@ -190,12 +190,16 @@ pipeline {
                             script {
                                 sh """
                                     echo "构建后端镜像: luxury-mall-backend:${IMAGE_TAG}"
+                                    echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
+                                    echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
+                                    
                                     docker build -t luxury-mall-backend:${IMAGE_TAG} .
                                     docker tag luxury-mall-backend:${IMAGE_TAG} luxury-mall-backend:latest
                                     
                                     echo "✓ 后端镜像构建完成"
                                     echo "镜像信息:"
-                                    docker images | grep luxury-mall-backend | head -2
+                                    docker images luxury-mall-backend:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    docker images luxury-mall-backend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
                                 """
                             }
                         }
@@ -214,12 +218,20 @@ pipeline {
                             script {
                                 sh """
                                     echo "构建前端镜像: luxury-mall-frontend:${IMAGE_TAG}"
+                                    echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
+                                    echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
+                                    
                                     docker build -t luxury-mall-frontend:${IMAGE_TAG} .
                                     docker tag luxury-mall-frontend:${IMAGE_TAG} luxury-mall-frontend:latest
                                     
                                     echo "✓ 前端镜像构建完成"
                                     echo "镜像信息:"
-                                    docker images | grep luxury-mall-frontend | head -2
+                                    docker images luxury-mall-frontend:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    docker images luxury-mall-frontend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    
+                                    # 验证镜像内的文件时间戳
+                                    echo "验证镜像内的文件时间戳:"
+                                    docker run --rm luxury-mall-frontend:latest ls -lth /usr/share/nginx/html | head -5 || true
                                 """
                             }
                         }
@@ -259,28 +271,87 @@ pipeline {
                     
                     echo "部署环境: ${deployEnv}"
                     echo "项目目录: ${PROJECT_DIR}"
+                    echo "Jenkins Workspace: ${env.WORKSPACE}"
+                    
+                    // 从 Jenkins workspace 同步代码到部署目录
+                    script {
+                        sh """
+                            echo "=========================================="
+                            echo "同步代码到部署目录..."
+                            echo "源目录: ${env.WORKSPACE}"
+                            echo "目标目录: ${PROJECT_DIR}"
+                            echo "=========================================="
+                            
+                            # 确保部署目录存在
+                            mkdir -p ${PROJECT_DIR}
+                            
+                            # 备份现有的 .env 文件（如果存在）
+                            if [ -f ${PROJECT_DIR}/.env ]; then
+                                echo "备份现有 .env 文件..."
+                                cp ${PROJECT_DIR}/.env ${PROJECT_DIR}/.env.backup.$(date +%Y%m%d_%H%M%S) || true
+                            fi
+                            
+                            # 使用 rsync 同步文件（排除不需要的文件）
+                            if command -v rsync >/dev/null 2>&1; then
+                                echo "使用 rsync 同步文件..."
+                                rsync -av --delete \\
+                                    --exclude='.git' \\
+                                    --exclude='node_modules' \\
+                                    --exclude='dist' \\
+                                    --exclude='build' \\
+                                    --exclude='.env' \\
+                                    --exclude='.env.backup.*' \\
+                                    --exclude='luxury-mall-backend/node_modules' \\
+                                    --exclude='luxury-mall-frontend/node_modules' \\
+                                    --exclude='luxury-mall-backend/dist' \\
+                                    --exclude='luxury-mall-frontend/dist' \\
+                                    --exclude='luxury-mall-backend/data' \\
+                                    ${env.WORKSPACE}/ ${PROJECT_DIR}/
+                                echo "✓ 使用 rsync 同步完成"
+                            else
+                                echo "rsync 不可用，使用 cp 命令..."
+                                # 如果 rsync 不可用，使用 cp 命令
+                                # 先清理部署目录（保留 .env 文件）
+                                find ${PROJECT_DIR} -mindepth 1 -maxdepth 1 ! -name '.env' ! -name '.env.backup.*' -exec rm -rf {} + 2>/dev/null || true
+                                
+                                # 复制文件
+                                cp -r ${env.WORKSPACE}/* ${PROJECT_DIR}/ 2>/dev/null || true
+                                cp -r ${env.WORKSPACE}/.[!.]* ${PROJECT_DIR}/ 2>/dev/null || true
+                                
+                                # 清理不需要的文件
+                                rm -rf ${PROJECT_DIR}/.git 2>/dev/null || true
+                                rm -rf ${PROJECT_DIR}/luxury-mall-backend/node_modules 2>/dev/null || true
+                                rm -rf ${PROJECT_DIR}/luxury-mall-frontend/node_modules 2>/dev/null || true
+                                rm -rf ${PROJECT_DIR}/luxury-mall-backend/dist 2>/dev/null || true
+                                rm -rf ${PROJECT_DIR}/luxury-mall-frontend/dist 2>/dev/null || true
+                                
+                                echo "✓ 使用 cp 同步完成"
+                            fi
+                            
+                            # 恢复 .env 文件
+                            LATEST_ENV_BACKUP=\$(ls -t ${PROJECT_DIR}/.env.backup.* 2>/dev/null | head -1)
+                            if [ -n "\$LATEST_ENV_BACKUP" ] && [ ! -f ${PROJECT_DIR}/.env ]; then
+                                echo "恢复 .env 文件..."
+                                cp "\$LATEST_ENV_BACKUP" ${PROJECT_DIR}/.env || true
+                            fi
+                            
+                            # 验证同步结果
+                            echo ""
+                            echo "=========================================="
+                            echo "验证同步结果:"
+                            echo "=========================================="
+                            echo "部署目录内容:"
+                            ls -la ${PROJECT_DIR} | head -10
+                            echo ""
+                            echo "当前提交: \$(cd ${env.WORKSPACE} && git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
+                            echo "部署目录提交: \$(cd ${PROJECT_DIR} && git rev-parse --short HEAD 2>/dev/null || echo 'N/A (not a git repo)')"
+                            echo "=========================================="
+                        """
+                    }
                     
                     // 切换到项目目录
                     dir("${PROJECT_DIR}") {
                         script {
-                            // 同步代码到部署目录（确保使用最新代码）
-                            sh """
-                                echo "同步代码到部署目录..."
-                                echo "当前分支: ${GIT_BRANCH}"
-                                echo "当前提交: ${GIT_COMMIT_SHORT}"
-                                
-                                # 检查是否是 Git 仓库
-                                if [ -d .git ]; then
-                                    echo "更新代码..."
-                                    git pull origin master|| true
-                                    git clean -fd || true
-                                    echo "✓ 代码已同步"
-                                    echo "当前提交: \$(git rev-parse --short HEAD)"
-                                else
-                                    echo "⚠ 警告: 部署目录不是 Git 仓库，跳过代码同步"
-                                    echo "建议: 确保部署目录的代码是最新的"
-                                fi
-                            """
                             
                             // 创建 .env 文件（仅生产环境需要）
                             if (deployEnv == 'production') {
@@ -398,8 +469,42 @@ EOF
                                 docker-compose ${composeFiles} ps
                                 
                                 # 验证容器使用的镜像
+                                echo ""
+                                echo "=========================================="
                                 echo "验证容器使用的镜像:"
+                                echo "=========================================="
                                 docker-compose ${composeFiles} ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose ${composeFiles} ps
+                                
+                                # 检查前端容器使用的镜像 ID
+                                echo ""
+                                echo "前端容器详细信息:"
+                                FRONTEND_CONTAINER_ID=\$(docker-compose ${composeFiles} ps -q frontend)
+                                if [ -n "\$FRONTEND_CONTAINER_ID" ]; then
+                                    echo "容器 ID: \$FRONTEND_CONTAINER_ID"
+                                    echo "容器使用的镜像 ID:"
+                                    docker inspect \$FRONTEND_CONTAINER_ID --format='{{.Image}}' || true
+                                    echo "latest 标签指向的镜像 ID:"
+                                    docker images luxury-mall-frontend:latest --format='{{.ID}}' || true
+                                    echo "容器内文件时间戳:"
+                                    docker exec \$FRONTEND_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
+                                else
+                                    echo "⚠ 警告: 前端容器未找到"
+                                fi
+                                
+                                # 检查后端容器使用的镜像 ID
+                                echo ""
+                                echo "后端容器详细信息:"
+                                BACKEND_CONTAINER_ID=\$(docker-compose ${composeFiles} ps -q backend)
+                                if [ -n "\$BACKEND_CONTAINER_ID" ]; then
+                                    echo "容器 ID: \$BACKEND_CONTAINER_ID"
+                                    echo "容器使用的镜像 ID:"
+                                    docker inspect \$BACKEND_CONTAINER_ID --format='{{.Image}}' || true
+                                    echo "latest 标签指向的镜像 ID:"
+                                    docker images luxury-mall-backend:latest --format='{{.ID}}' || true
+                                else
+                                    echo "⚠ 警告: 后端容器未找到"
+                                fi
+                                echo "=========================================="
                             """
                         }
                     }
