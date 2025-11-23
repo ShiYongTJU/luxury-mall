@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '@/context/CartContext'
+import { confirm } from '@/components/basic/Confirm/Confirm'
 import './Cart.css'
 
 const Cart = () => {
@@ -8,9 +9,19 @@ const Cart = () => {
 
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  const handleDecrease = (uid: string, quantity: number) => {
+  const handleDecrease = (uid: string, quantity: number, itemName: string) => {
     if (quantity <= 1) {
-      removeItem(uid)
+      // 减少到0时，弹出确认对话框
+      confirm.show({
+        title: '删除商品',
+        message: `确定要从购物车中删除"${itemName}"吗？`,
+        confirmText: '确定删除',
+        cancelText: '取消',
+        type: 'danger',
+        onConfirm: () => {
+          removeItem(uid)
+        }
+      })
       return
     }
     updateQuantity(uid, quantity - 1)
@@ -18,6 +29,19 @@ const Cart = () => {
 
   const handleIncrease = (uid: string, quantity: number) => {
     updateQuantity(uid, quantity + 1)
+  }
+
+  const handleRemove = (uid: string, itemName: string) => {
+    confirm.show({
+      title: '删除商品',
+      message: `确定要从购物车中删除"${itemName}"吗？`,
+      confirmText: '确定删除',
+      cancelText: '取消',
+      type: 'danger',
+      onConfirm: () => {
+        removeItem(uid)
+      }
+    })
   }
 
   return (
@@ -45,9 +69,6 @@ const Cart = () => {
                 <div className="cart-item-info">
                   <div className="cart-item-header">
                     <h3 className="cart-item-name">{item.name}</h3>
-                    <button className="cart-item-remove" onClick={() => removeItem(item.uid)}>
-                      ×
-                    </button>
                   </div>
                   {item.selectedSpecs && (
                     <p className="cart-item-specs">
@@ -61,7 +82,7 @@ const Cart = () => {
                 <div className="cart-item-actions">
                   <button
                     className="cart-item-btn"
-                    onClick={() => handleDecrease(item.uid, item.quantity)}
+                    onClick={() => handleDecrease(item.uid, item.quantity, item.name)}
                   >
                     -
                   </button>
@@ -73,6 +94,9 @@ const Cart = () => {
                     +
                   </button>
                 </div>
+                <button className="cart-item-remove" onClick={() => handleRemove(item.uid, item.name)}>
+                  ×
+                </button>
               </div>
             ))}
           </div>
