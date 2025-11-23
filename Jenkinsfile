@@ -20,8 +20,8 @@ pipeline {
         GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
         GIT_BRANCH = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
         
-        // 部署环境（根据分支自动判断）
-        DEPLOY_ENV = "${env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'master' ? 'production' : 'development'}"
+        // 部署环境（根据分支自动判断，将在 stage 中动态设置）
+        DEPLOY_ENV = 'development'
         
         // 从 Jenkins 凭据读取敏感信息
         // 注意：凭据 ID 需要在 Jenkins 中预先配置
@@ -370,7 +370,8 @@ pipeline {
                 script {
                     // 确定部署环境
                     def deployEnv = params.DEPLOY_ENV_OVERRIDE == 'auto' ? 
-                        DEPLOY_ENV : params.DEPLOY_ENV_OVERRIDE
+                        (env.GIT_BRANCH == 'main' || env.GIT_BRANCH == 'master' ? 'production' : 'development') : 
+                        params.DEPLOY_ENV_OVERRIDE
                     
                     echo "=========================================="
                     echo "阶段 5: 部署项目到 ${deployEnv} 环境"
@@ -460,8 +461,7 @@ pipeline {
                         // 切换到项目目录
                         dir("${PROJECT_DIR}") {
                             script {
-                            
-                            // 创建 .env 文件（仅生产环境需要）
+                                // 创建 .env 文件（仅生产环境需要）
                             if (deployEnv == 'production') {
                                 sh """
                                     echo "创建 .env 文件..."
@@ -659,137 +659,138 @@ EOF
                 }
             }
             
-                // 部署 Portfolio 项目
-                if (params.BUILD_PORTFOLIO == true) {
-                    echo "部署 Programmer Portfolio..."
-                    echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
-                    echo "Jenkins Workspace: ${env.WORKSPACE}"
-                    
-                    // 从 Jenkins workspace 同步代码到部署目录
-                    sh """
-                    echo "=========================================="
-                    echo "同步 Portfolio 代码到部署目录..."
-                    echo "源目录: ${env.WORKSPACE}/programmer-portfolio"
-                    echo "目标目录: ${PORTFOLIO_PROJECT_DIR}"
-                    echo "=========================================="
-                    
-                    # 确保部署目录存在
-                    mkdir -p ${PORTFOLIO_PROJECT_DIR}
-                    
-                    # 使用 rsync 同步文件（排除不需要的文件）
-                    if command -v rsync >/dev/null 2>&1; then
-                        echo "使用 rsync 同步文件..."
-                        rsync -av --delete \\
-                            --exclude='.git' \\
-                            --exclude='node_modules' \\
-                            --exclude='dist' \\
-                            --exclude='build' \\
-                            ${env.WORKSPACE}/programmer-portfolio/ ${PORTFOLIO_PROJECT_DIR}/
-                        echo "✓ 使用 rsync 同步完成"
-                    else
-                        echo "rsync 不可用，使用 cp 命令..."
-                        # 如果 rsync 不可用，使用 cp 命令
-                        # 先清理部署目录
-                        find ${PORTFOLIO_PROJECT_DIR} -mindepth 1 -maxdepth 1 ! -name '.env' ! -name '.env.backup.*' -exec rm -rf {} + 2>/dev/null || true
+                    // 部署 Portfolio 项目
+                    if (params.BUILD_PORTFOLIO == true) {
+                        echo "部署 Programmer Portfolio..."
+                        echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
+                        echo "Jenkins Workspace: ${env.WORKSPACE}"
                         
-                        # 复制文件
-                        cp -r ${env.WORKSPACE}/programmer-portfolio/* ${PORTFOLIO_PROJECT_DIR}/ 2>/dev/null || true
-                        cp -r ${env.WORKSPACE}/programmer-portfolio/.[!.]* ${PORTFOLIO_PROJECT_DIR}/ 2>/dev/null || true
-                        
-                        # 清理不需要的文件
-                        rm -rf ${PORTFOLIO_PROJECT_DIR}/.git 2>/dev/null || true
-                        rm -rf ${PORTFOLIO_PROJECT_DIR}/node_modules 2>/dev/null || true
-                        rm -rf ${PORTFOLIO_PROJECT_DIR}/dist 2>/dev/null || true
-                        
-                        echo "✓ 使用 cp 同步完成"
-                    fi
-                    
-                    # 验证同步结果
-                    echo ""
-                    echo "=========================================="
-                    echo "验证同步结果:"
-                    echo "=========================================="
-                    echo "部署目录内容:"
-                    ls -la ${PORTFOLIO_PROJECT_DIR} | head -10
-                    echo "=========================================="
-                """
-                
-                    // 切换到项目目录
-                    dir("${PORTFOLIO_PROJECT_DIR}") {
-                        script {
-                        // 清理旧容器和镜像（如果启用，只清理 Portfolio）
-                        if (params.CLEAN_BUILD) {
-                            sh '''
-                                echo "清理旧的 Portfolio 容器和镜像..."
-                                docker-compose -f docker-compose.yml down || true
-                                
-                                # 清理未使用的镜像（保留最近 3 个版本）
-                                docker image prune -f || true
-                                
-                                echo "✓ 清理完成"
-                            '''
-                        }
-                        
-                        // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
+                        // 从 Jenkins workspace 同步代码到部署目录
                         sh """
-                            echo "启动 Portfolio 服务（使用已构建的镜像）..."
-                            echo "Portfolio 镜像: programmer-portfolio:latest"
+                            echo "=========================================="
+                            echo "同步 Portfolio 代码到部署目录..."
+                            echo "源目录: ${env.WORKSPACE}/programmer-portfolio"
+                            echo "目标目录: ${PORTFOLIO_PROJECT_DIR}"
+                            echo "=========================================="
                             
-                            # 验证镜像是否存在
-                            PORTFOLIO_IMAGE_EXISTS=\$(docker images | grep -c "programmer-portfolio.*latest" || echo "0")
+                            # 确保部署目录存在
+                            mkdir -p ${PORTFOLIO_PROJECT_DIR}
                             
-                            if [ "\$PORTFOLIO_IMAGE_EXISTS" -eq "0" ]; then
-                                echo "⚠ 警告: programmer-portfolio:latest 镜像不存在，将重新构建"
+                            # 使用 rsync 同步文件（排除不需要的文件）
+                            if command -v rsync >/dev/null 2>&1; then
+                                echo "使用 rsync 同步文件..."
+                                rsync -av --delete \\
+                                    --exclude='.git' \\
+                                    --exclude='node_modules' \\
+                                    --exclude='dist' \\
+                                    --exclude='build' \\
+                                    ${env.WORKSPACE}/programmer-portfolio/ ${PORTFOLIO_PROJECT_DIR}/
+                                echo "✓ 使用 rsync 同步完成"
                             else
-                                echo "✓ Portfolio 镜像存在: programmer-portfolio:latest"
-                                echo "Portfolio 镜像详细信息:"
-                                docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
+                                echo "rsync 不可用，使用 cp 命令..."
+                                # 如果 rsync 不可用，使用 cp 命令
+                                # 先清理部署目录
+                                find ${PORTFOLIO_PROJECT_DIR} -mindepth 1 -maxdepth 1 ! -name '.env' ! -name '.env.backup.*' -exec rm -rf {} + 2>/dev/null || true
+                                
+                                # 复制文件
+                                cp -r ${env.WORKSPACE}/programmer-portfolio/* ${PORTFOLIO_PROJECT_DIR}/ 2>/dev/null || true
+                                cp -r ${env.WORKSPACE}/programmer-portfolio/.[!.]* ${PORTFOLIO_PROJECT_DIR}/ 2>/dev/null || true
+                                
+                                # 清理不需要的文件
+                                rm -rf ${PORTFOLIO_PROJECT_DIR}/.git 2>/dev/null || true
+                                rm -rf ${PORTFOLIO_PROJECT_DIR}/node_modules 2>/dev/null || true
+                                rm -rf ${PORTFOLIO_PROJECT_DIR}/dist 2>/dev/null || true
+                                
+                                echo "✓ 使用 cp 同步完成"
                             fi
                             
-                            # 停止并删除现有容器（确保使用新镜像）
-                            echo "停止现有容器..."
-                            docker-compose -f docker-compose.yml down || true
-                            sleep 3
-                            
-                            # 如果镜像存在，使用 --no-build 并强制重新创建；否则使用 --build
-                            if [ "\$PORTFOLIO_IMAGE_EXISTS" -gt "0" ]; then
-                                echo "使用已构建的镜像启动服务（强制重新创建容器）..."
-                                docker-compose -f docker-compose.yml up -d --no-build --force-recreate
-                            else
-                                echo "镜像不存在，重新构建镜像..."
-                                docker-compose -f docker-compose.yml up -d --build --force-recreate
-                            fi
-                            
-                            echo "等待服务启动..."
-                            sleep 10
-                            
-                            echo "检查服务状态..."
-                            docker-compose -f docker-compose.yml ps
-                            
-                            # 验证容器使用的镜像
+                            # 验证同步结果
                             echo ""
                             echo "=========================================="
-                            echo "验证容器使用的镜像:"
+                            echo "验证同步结果:"
                             echo "=========================================="
-                            docker-compose -f docker-compose.yml ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose -f docker-compose.yml ps
-                            
-                            # 检查 Portfolio 容器使用的镜像 ID
-                            echo ""
-                            echo "Portfolio 容器详细信息:"
-                            PORTFOLIO_CONTAINER_ID=\$(docker-compose -f docker-compose.yml ps -q portfolio)
-                            if [ -n "\$PORTFOLIO_CONTAINER_ID" ]; then
-                                echo "容器 ID: \$PORTFOLIO_CONTAINER_ID"
-                                echo "容器使用的镜像 ID:"
-                                docker inspect \$PORTFOLIO_CONTAINER_ID --format='{{.Image}}' || true
-                                echo "latest 标签指向的镜像 ID:"
-                                docker images programmer-portfolio:latest --format='{{.ID}}' || true
-                                echo "容器内文件时间戳:"
-                                docker exec \$PORTFOLIO_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
-                            else
-                                echo "⚠ 警告: Portfolio 容器未找到"
-                            fi
+                            echo "部署目录内容:"
+                            ls -la ${PORTFOLIO_PROJECT_DIR} | head -10
                             echo "=========================================="
                         """
+                
+                        // 切换到项目目录
+                        dir("${PORTFOLIO_PROJECT_DIR}") {
+                            script {
+                                // 清理旧容器和镜像（如果启用，只清理 Portfolio）
+                                if (params.CLEAN_BUILD) {
+                                    sh '''
+                                        echo "清理旧的 Portfolio 容器和镜像..."
+                                        docker-compose -f docker-compose.yml down || true
+                                        
+                                        # 清理未使用的镜像（保留最近 3 个版本）
+                                        docker image prune -f || true
+                                        
+                                        echo "✓ 清理完成"
+                                    '''
+                                }
+                                
+                                // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
+                                sh """
+                                    echo "启动 Portfolio 服务（使用已构建的镜像）..."
+                                    echo "Portfolio 镜像: programmer-portfolio:latest"
+                                    
+                                    # 验证镜像是否存在
+                                    PORTFOLIO_IMAGE_EXISTS=\$(docker images | grep -c "programmer-portfolio.*latest" || echo "0")
+                                    
+                                    if [ "\$PORTFOLIO_IMAGE_EXISTS" -eq "0" ]; then
+                                        echo "⚠ 警告: programmer-portfolio:latest 镜像不存在，将重新构建"
+                                    else
+                                        echo "✓ Portfolio 镜像存在: programmer-portfolio:latest"
+                                        echo "Portfolio 镜像详细信息:"
+                                        docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
+                                    fi
+                                    
+                                    # 停止并删除现有容器（确保使用新镜像）
+                                    echo "停止现有容器..."
+                                    docker-compose -f docker-compose.yml down || true
+                                    sleep 3
+                                    
+                                    # 如果镜像存在，使用 --no-build 并强制重新创建；否则使用 --build
+                                    if [ "\$PORTFOLIO_IMAGE_EXISTS" -gt "0" ]; then
+                                        echo "使用已构建的镜像启动服务（强制重新创建容器）..."
+                                        docker-compose -f docker-compose.yml up -d --no-build --force-recreate
+                                    else
+                                        echo "镜像不存在，重新构建镜像..."
+                                        docker-compose -f docker-compose.yml up -d --build --force-recreate
+                                    fi
+                                    
+                                    echo "等待服务启动..."
+                                    sleep 10
+                                    
+                                    echo "检查服务状态..."
+                                    docker-compose -f docker-compose.yml ps
+                                    
+                                    # 验证容器使用的镜像
+                                    echo ""
+                                    echo "=========================================="
+                                    echo "验证容器使用的镜像:"
+                                    echo "=========================================="
+                                    docker-compose -f docker-compose.yml ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose -f docker-compose.yml ps
+                                    
+                                    # 检查 Portfolio 容器使用的镜像 ID
+                                    echo ""
+                                    echo "Portfolio 容器详细信息:"
+                                    PORTFOLIO_CONTAINER_ID=\$(docker-compose -f docker-compose.yml ps -q portfolio)
+                                    if [ -n "\$PORTFOLIO_CONTAINER_ID" ]; then
+                                        echo "容器 ID: \$PORTFOLIO_CONTAINER_ID"
+                                        echo "容器使用的镜像 ID:"
+                                        docker inspect \$PORTFOLIO_CONTAINER_ID --format='{{.Image}}' || true
+                                        echo "latest 标签指向的镜像 ID:"
+                                        docker images programmer-portfolio:latest --format='{{.ID}}' || true
+                                        echo "容器内文件时间戳:"
+                                        docker exec \$PORTFOLIO_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
+                                    else
+                                        echo "⚠ 警告: Portfolio 容器未找到"
+                                    fi
+                                    echo "=========================================="
+                                """
+                            }
                         }
                     }
                 }
