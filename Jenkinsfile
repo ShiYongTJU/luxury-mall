@@ -365,21 +365,30 @@ EOF
                                     echo "⚠ 警告: luxury-mall-backend:latest 镜像不存在，将重新构建"
                                 else
                                     echo "✓ 后端镜像存在: luxury-mall-backend:latest"
+                                    echo "后端镜像详细信息:"
+                                    docker images luxury-mall-backend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
                                 fi
                                 
                                 if [ "\$FRONTEND_IMAGE_EXISTS" -eq "0" ]; then
                                     echo "⚠ 警告: luxury-mall-frontend:latest 镜像不存在，将重新构建"
                                 else
                                     echo "✓ 前端镜像存在: luxury-mall-frontend:latest"
+                                    echo "前端镜像详细信息:"
+                                    docker images luxury-mall-frontend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
                                 fi
                                 
-                                # 如果镜像都存在，使用 --no-build；否则使用 --build
+                                # 停止并删除现有容器（确保使用新镜像）
+                                echo "停止现有容器..."
+                                docker-compose ${composeFiles} down || true
+                                sleep 3
+                                
+                                # 如果镜像都存在，使用 --no-build 并强制重新创建；否则使用 --build
                                 if [ "\$BACKEND_IMAGE_EXISTS" -gt "0" ] && [ "\$FRONTEND_IMAGE_EXISTS" -gt "0" ]; then
-                                    echo "使用已构建的镜像启动服务..."
-                                    docker-compose ${composeFiles} up -d --no-build
+                                    echo "使用已构建的镜像启动服务（强制重新创建容器）..."
+                                    docker-compose ${composeFiles} up -d --no-build --force-recreate
                                 else
                                     echo "部分镜像不存在，重新构建缺失的镜像..."
-                                    docker-compose ${composeFiles} up -d --build
+                                    docker-compose ${composeFiles} up -d --build --force-recreate
                                 fi
                                 
                                 echo "等待服务启动..."
@@ -387,6 +396,10 @@ EOF
                                 
                                 echo "检查服务状态..."
                                 docker-compose ${composeFiles} ps
+                                
+                                # 验证容器使用的镜像
+                                echo "验证容器使用的镜像:"
+                                docker-compose ${composeFiles} ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose ${composeFiles} ps
                             """
                         }
                     }
