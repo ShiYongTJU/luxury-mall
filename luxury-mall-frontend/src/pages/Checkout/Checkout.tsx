@@ -5,7 +5,8 @@ import { useAddress } from '@/context/AddressContext'
 import { useUser } from '@/context/UserContext'
 import type { Address } from '@/types/address'
 import { toast } from '@/components/basic/Toast/Toast'
-import { createOrder, getProvinces, getCities, getDistricts, type Region } from '@/api/api'
+import { createOrder } from '@/api/api'
+import { getProvinces, getCities, getDistricts, type Region } from '@/data/regions'
 import './Checkout.css'
 
 const Checkout = () => {

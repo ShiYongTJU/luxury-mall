@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAddress } from '@/context/AddressContext'
-import { getProvinces, getCities, getDistricts, type Region } from '@/api/api'
+import { getProvinces, getCities, getDistricts, type Region } from '@/data/regions'
 import type { Address } from '@/types/address'
 import { toast } from '@/components/basic/Toast/Toast'
 import { confirm } from '@/components/basic/Confirm/Confirm'

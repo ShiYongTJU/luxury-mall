@@ -156,5 +156,40 @@
     "orderNo": "ORD1763727955723",
     "createTime": "2025-11-21T12:25:55.723Z",
     "payTime": "2025-11-21T12:26:06.997Z"
+  },
+  {
+    "items": [
+      {
+        "productId": "3",
+        "name": "真丝围巾",
+        "image": "https://images.unsplash.com/photo-1583292650898-7d22cd27ca6f?w=800",
+        "price": 3200,
+        "quantity": 1,
+        "selectedSpecs": {
+          "color": {
+            "id": "color-amber",
+            "label": "琥珀橙",
+            "specName": "配色"
+          }
+        }
+      }
+    ],
+    "address": {
+      "name": "111111",
+      "phone": "18888888888",
+      "province": "广东省",
+      "city": "深圳市",
+      "district": "龙岗区",
+      "detail": "ffffffff",
+      "isDefault": true,
+      "tag": "f",
+      "id": "addr-1763886468737-tsnb7p16s"
+    },
+    "totalPrice": 3200,
+    "status": "pending",
+    "userId": "user-1763821757694-x62v2ocdy",
+    "id": "order-1763886470774",
+    "orderNo": "ORD1763886470774",
+    "createTime": "2025-11-23T08:27:50.774Z"
   }
 ]
