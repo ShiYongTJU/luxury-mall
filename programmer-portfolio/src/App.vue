@@ -2,10 +2,9 @@
   <div class="app-shell">
     <header class="hero">
       <p class="eyebrow">PROGRAMMER · PORTFOLIO</p>
-      <h1>以工匠精神迭代的高质项目</h1>
+      <h1>全栈开发 · 从设计到部署的完整解决方案</h1>
       <p class="subtitle">
-        汇总近期交付的重点产品案例，涵盖云原生监控、AI 协作与 XR 体验。数据通过本地 Mock
-        模拟接口，使用 axios 异步获取，真实还原接口交互流程。
+        全栈开发工程师，专注于 React、TypeScript、Node.js 等技术栈。具备从需求分析到系统设计、前后端开发、DevOps 部署的完整项目交付能力。擅长构建高性能、可维护的现代化 Web 应用，并能够独立完成 CI/CD 流程设计与实施。
       </p>
       <button class="ghost-btn" :disabled="loading" @click="loadProjects">
         {{ loading ? '正在刷新...' : '重新获取数据' }}
