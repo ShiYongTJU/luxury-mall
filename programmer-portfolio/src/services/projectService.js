@@ -37,7 +37,7 @@ const mockProjects = [
     role: '后端开发',
     timeline: '2024 · 电商项目',
     links: {
-      demo: 'http://1.15.93.186:3001',
+      demo: 'http://1.15.93.186:80',
       repo: 'https://gitee.com/shikii/luxury-mall'
     }
   },
