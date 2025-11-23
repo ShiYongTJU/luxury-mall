@@ -288,7 +288,7 @@ pipeline {
                             # 备份现有的 .env 文件（如果存在）
                             if [ -f ${PROJECT_DIR}/.env ]; then
                                 echo "备份现有 .env 文件..."
-                                cp ${PROJECT_DIR}/.env ${PROJECT_DIR}/.env.backup.$(date +%Y%m%d_%H%M%S) || true
+                                cp ${PROJECT_DIR}/.env ${PROJECT_DIR}/.env.backup.\$(date +%Y%m%d_%H%M%S) || true
                             fi
                             
                             # 使用 rsync 同步文件（排除不需要的文件）
