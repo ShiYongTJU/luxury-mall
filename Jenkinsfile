@@ -89,7 +89,7 @@ pipeline {
             description: '选择要构建和部署的项目（可多选）',
             choiceType: 'CHECKBOX',
             filterable: false,
-            groovyScript: '''
+            script: '''
                 return [
                     'luxury-mall-backend:Luxury Mall 后端',
                     'luxury-mall-frontend:Luxury Mall 前端',
@@ -506,13 +506,16 @@ EOF
                                 echo "启动服务（使用已构建的镜像）..."
                                 
                                 # 根据选中的项目决定启动哪些服务
+                                # Active Choices 返回的可能是数组，Groovy 会将其转换为字符串
                                 BUILD_BACKEND="false"
                                 BUILD_FRONTEND="false"
-                                if [ -n "${params.BUILD_PROJECTS}" ]; then
-                                    if echo "${params.BUILD_PROJECTS}" | grep -q "luxury-mall-backend"; then
+                                # 将参数转换为字符串（处理数组情况）
+                                BUILD_PROJECTS_STR="${params.BUILD_PROJECTS ?: ''}"
+                                if [ -n "\$BUILD_PROJECTS_STR" ] && [ "\$BUILD_PROJECTS_STR" != "null" ] && [ "\$BUILD_PROJECTS_STR" != "[]" ]; then
+                                    if echo "\$BUILD_PROJECTS_STR" | grep -q "luxury-mall-backend"; then
                                         BUILD_BACKEND="true"
                                     fi
-                                    if echo "${params.BUILD_PROJECTS}" | grep -q "luxury-mall-frontend"; then
+                                    if echo "\$BUILD_PROJECTS_STR" | grep -q "luxury-mall-frontend"; then
                                         BUILD_FRONTEND="true"
                                     fi
                                 fi
