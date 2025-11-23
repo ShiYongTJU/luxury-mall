@@ -60,7 +60,7 @@ pipeline {
     parameters {
         choice(
             name: 'DEPLOY_ENV_OVERRIDE',
-            choices: ['auto', 'production', 'development'],
+            choices: [ 'production', 'development','auto' ],
             description: '部署环境（auto 表示根据分支自动判断）'
         )
         booleanParam(
@@ -321,31 +321,31 @@ pipeline {
             }
         }
         
-        // 阶段 5: 部署 Luxury Mall 项目
-        stage('Deploy Luxury Mall') {
-            when {
-                anyOf {
-                    expression { params.BUILD_BACKEND == true }
-                    expression { params.BUILD_FRONTEND == true }
-                }
-            }
-            steps {
-                script {
-                    echo "=========================================="
-                    echo "阶段 5: 部署到 ${DEPLOY_ENV} 环境"
-                    echo "=========================================="
-                    
-                    // 确定部署环境
-                    def deployEnv = params.DEPLOY_ENV_OVERRIDE == 'auto' ? 
-                        DEPLOY_ENV : params.DEPLOY_ENV_OVERRIDE
-                    
-                    echo "部署环境: ${deployEnv}"
-                    echo "项目目录: ${PROJECT_DIR}"
-                    echo "Jenkins Workspace: ${env.WORKSPACE}"
-                    
-                    // 从 Jenkins workspace 同步代码到部署目录
-                    script {
-                        sh """
+        // 阶段 5: 部署项目
+        stage('Deploy Projects') {
+            parallel {
+                stage('Deploy Luxury Mall') {
+                    when {
+                        anyOf {
+                            expression { params.BUILD_BACKEND == true }
+                            expression { params.BUILD_FRONTEND == true }
+                        }
+                    }
+                    steps {
+                        script {
+                            // 确定部署环境
+                            def deployEnv = params.DEPLOY_ENV_OVERRIDE == 'auto' ? 
+                                DEPLOY_ENV : params.DEPLOY_ENV_OVERRIDE
+                            
+                            echo "=========================================="
+                            echo "阶段 5.1: 部署 Luxury Mall 项目到 ${deployEnv} 环境"
+                            echo "=========================================="
+                            echo "部署环境: ${deployEnv}"
+                            echo "项目目录: ${PROJECT_DIR}"
+                            echo "Jenkins Workspace: ${env.WORKSPACE}"
+                            
+                            // 从 Jenkins workspace 同步代码到部署目录
+                            sh """
                             echo "=========================================="
                             echo "同步代码到部署目录..."
                             echo "源目录: ${env.WORKSPACE}"
@@ -417,17 +417,15 @@ pipeline {
                             echo "部署目录提交: \$(cd ${PROJECT_DIR} && git rev-parse --short HEAD 2>/dev/null || echo 'N/A (not a git repo)')"
                             echo "=========================================="
                         """
-                    }
-                    
-                    // 切换到项目目录
-                    dir("${PROJECT_DIR}") {
-                        script {
-                            
-                            // 创建 .env 文件（仅生产环境需要）
-                            if (deployEnv == 'production') {
-                                sh """
-                                    echo "创建 .env 文件..."
-                                    cat > .env << EOF
+                        
+                        // 切换到项目目录
+                        dir("${PROJECT_DIR}") {
+                            script {
+                                // 创建 .env 文件（仅生产环境需要）
+                                    if (deployEnv == 'production') {
+                                        sh """
+                                            echo "创建 .env 文件..."
+                                            cat > .env << EOF
 JWT_SECRET=${JWT_SECRET}
 DB_PASSWORD=${DB_PASSWORD}
 DB_NAME=${DB_NAME}
@@ -440,205 +438,202 @@ NODE_ENV=production
 PORT=3001
 JWT_EXPIRES_IN=7d
 EOF
+                                            
+                                            # 验证 .env 文件（不显示敏感信息）
+                                            echo "✓ .env 文件已创建"
+                                            echo "验证 .env 文件内容（隐藏敏感信息）:"
+                                            cat .env | grep -v PASSWORD | grep -v SECRET
+                                            
+                                            # 设置正确的文件权限（仅所有者可读写）
+                                            chmod 600 .env
+                                            echo "✓ .env 文件权限已设置 (600)"
+                                        """
+                                    } else {
+                                        echo "开发环境，跳过 .env 文件创建（使用 JSON 文件存储）"
+                                    }
                                     
-                                    # 验证 .env 文件（不显示敏感信息）
-                                    echo "✓ .env 文件已创建"
-                                    echo "验证 .env 文件内容（隐藏敏感信息）:"
-                                    cat .env | grep -v PASSWORD | grep -v SECRET
+                                    // 清理旧容器和镜像（如果启用）
+                                    if (params.CLEAN_BUILD) {
+                                        sh '''
+                                            echo "清理旧的容器和镜像..."
+                                            docker-compose -f docker-compose.yml -f docker-compose.prod.yml down || true
+                                            docker-compose -f docker-compose.yml -f docker-compose.dev.yml down || true
+                                            
+                                            # 清理未使用的镜像（保留最近 3 个版本）
+                                            docker image prune -f || true
+                                            
+                                            echo "✓ 清理完成"
+                                        '''
+                                    }
                                     
-                                    # 设置正确的文件权限（仅所有者可读写）
-                                    chmod 600 .env
-                                    echo "✓ .env 文件权限已设置 (600)"
-                                """
-                            } else {
-                                echo "开发环境，跳过 .env 文件创建（使用 JSON 文件存储）"
+                                    // 根据环境选择配置文件
+                                    def composeFiles = deployEnv == 'production' ? 
+                                        '-f docker-compose.yml -f docker-compose.prod.yml' :
+                                        '-f docker-compose.yml -f docker-compose.dev.yml'
+                                    
+                                    sh """
+                                        echo "使用配置文件: ${composeFiles}"
+                                        
+                                        # 如果启用重启服务，先停止现有容器（确保重新读取 .env 文件）
+                                        if [ "${params.RESTART_SERVICES}" = "true" ]; then
+                                            echo "重启服务模式：停止现有容器..."
+                                            docker-compose ${composeFiles} down || true
+                                            sleep 5
+                                            echo "✓ 容器已停止"
+                                        fi
+                                        
+                                        # 如果启用重置数据库，删除数据卷（仅生产环境）
+                                        if [ "${params.RESET_DATABASE}" = "true" ] && [ "${deployEnv}" = "production" ]; then
+                                            echo "⚠ 警告: 重新初始化数据库（删除所有数据）"
+                                            docker-compose ${composeFiles} down || true
+                                            docker volume rm luxury-mall_postgres_data 2>/dev/null || true
+                                            echo "✓ 数据卷已删除"
+                                            sleep 3
+                                        fi
+                                        
+                                        # 启动服务（使用 Jenkins 构建的镜像，不重新构建）
+                                        echo "启动服务（使用已构建的镜像）..."
+                                        
+                                        # 根据选中的项目决定启动哪些服务
+                                        BUILD_BACKEND="${params.BUILD_BACKEND}"
+                                        BUILD_FRONTEND="${params.BUILD_FRONTEND}"
+                                        
+                                        # 验证镜像是否存在
+                                        BACKEND_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-backend.*latest" || echo "0")
+                                        FRONTEND_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-frontend.*latest" || echo "0")
+                                        
+                                        if [ "\$BUILD_BACKEND" = "true" ]; then
+                                            if [ "\$BACKEND_IMAGE_EXISTS" -eq "0" ]; then
+                                                echo "⚠ 警告: luxury-mall-backend:latest 镜像不存在，将重新构建"
+                                            else
+                                                echo "✓ 后端镜像存在: luxury-mall-backend:latest"
+                                                echo "后端镜像详细信息:"
+                                                docker images luxury-mall-backend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
+                                            fi
+                                        fi
+                                        
+                                        if [ "\$BUILD_FRONTEND" = "true" ]; then
+                                            if [ "\$FRONTEND_IMAGE_EXISTS" -eq "0" ]; then
+                                                echo "⚠ 警告: luxury-mall-frontend:latest 镜像不存在，将重新构建"
+                                            else
+                                                echo "✓ 前端镜像存在: luxury-mall-frontend:latest"
+                                                echo "前端镜像详细信息:"
+                                                docker images luxury-mall-frontend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
+                                            fi
+                                        fi
+                                        
+                                        # 停止并删除现有容器（确保使用新镜像）
+                                        echo "停止现有容器..."
+                                        docker-compose ${composeFiles} down || true
+                                        sleep 3
+                                        
+                                        # 根据选中的项目决定启动哪些服务
+                                        SERVICES_TO_START=""
+                                        if [ "\$BUILD_BACKEND" = "true" ]; then
+                                            SERVICES_TO_START="\$SERVICES_TO_START backend"
+                                        fi
+                                        if [ "\$BUILD_FRONTEND" = "true" ]; then
+                                            SERVICES_TO_START="\$SERVICES_TO_START frontend"
+                                        fi
+                                        
+                                        # 如果选中了后端或前端，还需要启动 postgres（如果后端被选中）
+                                        if [ "\$BUILD_BACKEND" = "true" ]; then
+                                            SERVICES_TO_START="postgres\$SERVICES_TO_START"
+                                        fi
+                                        
+                                        # 判断是否需要重新构建
+                                        NEED_BUILD=false
+                                        if [ "\$BUILD_BACKEND" = "true" ] && [ "\$BACKEND_IMAGE_EXISTS" -eq "0" ]; then
+                                            NEED_BUILD=true
+                                        fi
+                                        if [ "\$BUILD_FRONTEND" = "true" ] && [ "\$FRONTEND_IMAGE_EXISTS" -eq "0" ]; then
+                                            NEED_BUILD=true
+                                        fi
+                                        
+                                        if [ "\$NEED_BUILD" = "true" ]; then
+                                            echo "部分镜像不存在，重新构建缺失的镜像..."
+                                            if [ -n "\$SERVICES_TO_START" ]; then
+                                                docker-compose ${composeFiles} up -d --build --force-recreate \$SERVICES_TO_START
+                                            else
+                                                docker-compose ${composeFiles} up -d --build --force-recreate
+                                            fi
+                                        else
+                                            echo "使用已构建的镜像启动服务（强制重新创建容器）..."
+                                            if [ -n "\$SERVICES_TO_START" ]; then
+                                                docker-compose ${composeFiles} up -d --no-build --force-recreate \$SERVICES_TO_START
+                                            else
+                                                docker-compose ${composeFiles} up -d --no-build --force-recreate
+                                            fi
+                                        fi
+                                        
+                                        echo "等待服务启动..."
+                                        sleep 20
+                                        
+                                        echo "检查服务状态..."
+                                        docker-compose ${composeFiles} ps
+                                        
+                                        # 验证容器使用的镜像
+                                        echo ""
+                                        echo "=========================================="
+                                        echo "验证容器使用的镜像:"
+                                        echo "=========================================="
+                                        docker-compose ${composeFiles} ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose ${composeFiles} ps
+                                        
+                                        # 检查前端容器使用的镜像 ID（如果前端被选中）
+                                        if [ "\$BUILD_FRONTEND" = "true" ]; then
+                                            echo ""
+                                            echo "前端容器详细信息:"
+                                            FRONTEND_CONTAINER_ID=\$(docker-compose ${composeFiles} ps -q frontend)
+                                            if [ -n "\$FRONTEND_CONTAINER_ID" ]; then
+                                                echo "容器 ID: \$FRONTEND_CONTAINER_ID"
+                                                echo "容器使用的镜像 ID:"
+                                                docker inspect \$FRONTEND_CONTAINER_ID --format='{{.Image}}' || true
+                                                echo "latest 标签指向的镜像 ID:"
+                                                docker images luxury-mall-frontend:latest --format='{{.ID}}' || true
+                                                echo "容器内文件时间戳:"
+                                                docker exec \$FRONTEND_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
+                                            else
+                                                echo "⚠ 警告: 前端容器未找到"
+                                            fi
+                                        fi
+                                        
+                                        # 检查后端容器使用的镜像 ID（如果后端被选中）
+                                        if [ "\$BUILD_BACKEND" = "true" ]; then
+                                            echo ""
+                                            echo "后端容器详细信息:"
+                                            BACKEND_CONTAINER_ID=\$(docker-compose ${composeFiles} ps -q backend)
+                                            if [ -n "\$BACKEND_CONTAINER_ID" ]; then
+                                                echo "容器 ID: \$BACKEND_CONTAINER_ID"
+                                                echo "容器使用的镜像 ID:"
+                                                docker inspect \$BACKEND_CONTAINER_ID --format='{{.Image}}' || true
+                                                echo "latest 标签指向的镜像 ID:"
+                                                docker images luxury-mall-backend:latest --format='{{.ID}}' || true
+                                            else
+                                                echo "⚠ 警告: 后端容器未找到"
+                                            fi
+                                        fi
+                                        echo "=========================================="
+                                    """
+                                }
                             }
-                            
-                            // 清理旧容器和镜像（如果启用）
-                            if (params.CLEAN_BUILD) {
-                                sh '''
-                                    echo "清理旧的容器和镜像..."
-                                    docker-compose -f docker-compose.yml -f docker-compose.prod.yml down || true
-                                    docker-compose -f docker-compose.yml -f docker-compose.dev.yml down || true
-                                    
-                                    # 清理未使用的镜像（保留最近 3 个版本）
-                                    docker image prune -f || true
-                                    
-                                    echo "✓ 清理完成"
-                                '''
-                            }
-                            
-                            // 根据环境选择配置文件
-                            def composeFiles = deployEnv == 'production' ? 
-                                '-f docker-compose.yml -f docker-compose.prod.yml' :
-                                '-f docker-compose.yml -f docker-compose.dev.yml'
-                            
-                            sh """
-                                echo "使用配置文件: ${composeFiles}"
-                                
-                                # 如果启用重启服务，先停止现有容器（确保重新读取 .env 文件）
-                                if [ "${params.RESTART_SERVICES}" = "true" ]; then
-                                    echo "重启服务模式：停止现有容器..."
-                                    docker-compose ${composeFiles} down || true
-                                    sleep 5
-                                    echo "✓ 容器已停止"
-                                fi
-                                
-                                # 如果启用重置数据库，删除数据卷（仅生产环境）
-                                if [ "${params.RESET_DATABASE}" = "true" ] && [ "${deployEnv}" = "production" ]; then
-                                    echo "⚠ 警告: 重新初始化数据库（删除所有数据）"
-                                    docker-compose ${composeFiles} down || true
-                                    docker volume rm luxury-mall_postgres_data 2>/dev/null || true
-                                    echo "✓ 数据卷已删除"
-                                    sleep 3
-                                fi
-                                
-                                # 启动服务（使用 Jenkins 构建的镜像，不重新构建）
-                                echo "启动服务（使用已构建的镜像）..."
-                                
-                                # 根据选中的项目决定启动哪些服务
-                                BUILD_BACKEND="${params.BUILD_BACKEND}"
-                                BUILD_FRONTEND="${params.BUILD_FRONTEND}"
-                                
-                                # 验证镜像是否存在
-                                BACKEND_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-backend.*latest" || echo "0")
-                                FRONTEND_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-frontend.*latest" || echo "0")
-                                
-                                if [ "\$BUILD_BACKEND" = "true" ]; then
-                                    if [ "\$BACKEND_IMAGE_EXISTS" -eq "0" ]; then
-                                        echo "⚠ 警告: luxury-mall-backend:latest 镜像不存在，将重新构建"
-                                    else
-                                        echo "✓ 后端镜像存在: luxury-mall-backend:latest"
-                                        echo "后端镜像详细信息:"
-                                        docker images luxury-mall-backend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
-                                    fi
-                                fi
-                                
-                                if [ "\$BUILD_FRONTEND" = "true" ]; then
-                                    if [ "\$FRONTEND_IMAGE_EXISTS" -eq "0" ]; then
-                                        echo "⚠ 警告: luxury-mall-frontend:latest 镜像不存在，将重新构建"
-                                    else
-                                        echo "✓ 前端镜像存在: luxury-mall-frontend:latest"
-                                        echo "前端镜像详细信息:"
-                                        docker images luxury-mall-frontend:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
-                                    fi
-                                fi
-                                
-                                # 停止并删除现有容器（确保使用新镜像）
-                                echo "停止现有容器..."
-                                docker-compose ${composeFiles} down || true
-                                sleep 3
-                                
-                                # 根据选中的项目决定启动哪些服务
-                                SERVICES_TO_START=""
-                                if [ "\$BUILD_BACKEND" = "true" ]; then
-                                    SERVICES_TO_START="\$SERVICES_TO_START backend"
-                                fi
-                                if [ "\$BUILD_FRONTEND" = "true" ]; then
-                                    SERVICES_TO_START="\$SERVICES_TO_START frontend"
-                                fi
-                                
-                                # 如果选中了后端或前端，还需要启动 postgres（如果后端被选中）
-                                if [ "\$BUILD_BACKEND" = "true" ]; then
-                                    SERVICES_TO_START="postgres\$SERVICES_TO_START"
-                                fi
-                                
-                                # 判断是否需要重新构建
-                                NEED_BUILD=false
-                                if [ "\$BUILD_BACKEND" = "true" ] && [ "\$BACKEND_IMAGE_EXISTS" -eq "0" ]; then
-                                    NEED_BUILD=true
-                                fi
-                                if [ "\$BUILD_FRONTEND" = "true" ] && [ "\$FRONTEND_IMAGE_EXISTS" -eq "0" ]; then
-                                    NEED_BUILD=true
-                                fi
-                                
-                                if [ "\$NEED_BUILD" = "true" ]; then
-                                    echo "部分镜像不存在，重新构建缺失的镜像..."
-                                    if [ -n "\$SERVICES_TO_START" ]; then
-                                        docker-compose ${composeFiles} up -d --build --force-recreate \$SERVICES_TO_START
-                                    else
-                                        docker-compose ${composeFiles} up -d --build --force-recreate
-                                    fi
-                                else
-                                    echo "使用已构建的镜像启动服务（强制重新创建容器）..."
-                                    if [ -n "\$SERVICES_TO_START" ]; then
-                                        docker-compose ${composeFiles} up -d --no-build --force-recreate \$SERVICES_TO_START
-                                    else
-                                        docker-compose ${composeFiles} up -d --no-build --force-recreate
-                                    fi
-                                fi
-                                
-                                echo "等待服务启动..."
-                                sleep 20
-                                
-                                echo "检查服务状态..."
-                                docker-compose ${composeFiles} ps
-                                
-                                # 验证容器使用的镜像
-                                echo ""
-                                echo "=========================================="
-                                echo "验证容器使用的镜像:"
-                                echo "=========================================="
-                                docker-compose ${composeFiles} ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose ${composeFiles} ps
-                                
-                                # 检查前端容器使用的镜像 ID（如果前端被选中）
-                                if [ "\$BUILD_FRONTEND" = "true" ]; then
-                                    echo ""
-                                    echo "前端容器详细信息:"
-                                    FRONTEND_CONTAINER_ID=\$(docker-compose ${composeFiles} ps -q frontend)
-                                    if [ -n "\$FRONTEND_CONTAINER_ID" ]; then
-                                        echo "容器 ID: \$FRONTEND_CONTAINER_ID"
-                                        echo "容器使用的镜像 ID:"
-                                        docker inspect \$FRONTEND_CONTAINER_ID --format='{{.Image}}' || true
-                                        echo "latest 标签指向的镜像 ID:"
-                                        docker images luxury-mall-frontend:latest --format='{{.ID}}' || true
-                                        echo "容器内文件时间戳:"
-                                        docker exec \$FRONTEND_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
-                                    else
-                                        echo "⚠ 警告: 前端容器未找到"
-                                    fi
-                                fi
-                                
-                                # 检查后端容器使用的镜像 ID（如果后端被选中）
-                                if [ "\$BUILD_BACKEND" = "true" ]; then
-                                    echo ""
-                                    echo "后端容器详细信息:"
-                                    BACKEND_CONTAINER_ID=\$(docker-compose ${composeFiles} ps -q backend)
-                                    if [ -n "\$BACKEND_CONTAINER_ID" ]; then
-                                        echo "容器 ID: \$BACKEND_CONTAINER_ID"
-                                        echo "容器使用的镜像 ID:"
-                                        docker inspect \$BACKEND_CONTAINER_ID --format='{{.Image}}' || true
-                                        echo "latest 标签指向的镜像 ID:"
-                                        docker images luxury-mall-backend:latest --format='{{.ID}}' || true
-                                    else
-                                        echo "⚠ 警告: 后端容器未找到"
-                                    fi
-                                fi
-                                echo "=========================================="
-                            """
                         }
                     }
                 }
-            }
-        }
-        
-        // 阶段 6: 部署 Programmer Portfolio
-        stage('Deploy Portfolio') {
-            when {
-                expression { params.BUILD_PORTFOLIO == true }
-            }
-            steps {
-                script {
-                    echo "=========================================="
-                    echo "阶段 6: 部署 Programmer Portfolio"
-                    echo "=========================================="
-                    echo "部署环境: ${DEPLOY_ENV}"
-                    echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
-                    echo "Jenkins Workspace: ${env.WORKSPACE}"
-                    
-                    // 从 Jenkins workspace 同步代码到部署目录
-                    script {
-                        sh """
+                
+                stage('Deploy Portfolio') {
+                    when {
+                        expression { params.BUILD_PORTFOLIO == true }
+                    }
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 5.2: 部署 Programmer Portfolio"
+                            echo "=========================================="
+                            echo "项目目录: ${PORTFOLIO_PROJECT_DIR}"
+                            echo "Jenkins Workspace: ${env.WORKSPACE}"
+                            
+                            // 从 Jenkins workspace 同步代码到部署目录
+                            sh """
                             echo "=========================================="
                             echo "同步 Portfolio 代码到部署目录..."
                             echo "源目录: ${env.WORKSPACE}/programmer-portfolio"
@@ -685,84 +680,84 @@ EOF
                             ls -la ${PORTFOLIO_PROJECT_DIR} | head -10
                             echo "=========================================="
                         """
-                    }
-                    
-                    // 切换到项目目录
-                    dir("${PORTFOLIO_PROJECT_DIR}") {
-                        script {
-                            // 清理旧容器和镜像（如果启用，只清理 Portfolio）
-                            if (params.CLEAN_BUILD) {
-                                sh '''
-                                    echo "清理旧的 Portfolio 容器和镜像..."
+                        
+                        // 切换到项目目录
+                        dir("${PORTFOLIO_PROJECT_DIR}") {
+                            script {
+                                // 清理旧容器和镜像（如果启用，只清理 Portfolio）
+                                if (params.CLEAN_BUILD) {
+                                    sh '''
+                                        echo "清理旧的 Portfolio 容器和镜像..."
+                                        docker-compose -f docker-compose.yml down || true
+                                        
+                                        # 清理未使用的镜像（保留最近 3 个版本）
+                                        docker image prune -f || true
+                                        
+                                        echo "✓ 清理完成"
+                                    '''
+                                }
+                                
+                                // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
+                                sh """
+                                    echo "启动 Portfolio 服务（使用已构建的镜像）..."
+                                    echo "Portfolio 镜像: programmer-portfolio:latest"
+                                    
+                                    # 验证镜像是否存在
+                                    PORTFOLIO_IMAGE_EXISTS=\$(docker images | grep -c "programmer-portfolio.*latest" || echo "0")
+                                    
+                                    if [ "\$PORTFOLIO_IMAGE_EXISTS" -eq "0" ]; then
+                                        echo "⚠ 警告: programmer-portfolio:latest 镜像不存在，将重新构建"
+                                    else
+                                        echo "✓ Portfolio 镜像存在: programmer-portfolio:latest"
+                                        echo "Portfolio 镜像详细信息:"
+                                        docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
+                                    fi
+                                    
+                                    # 停止并删除现有容器（确保使用新镜像）
+                                    echo "停止现有容器..."
                                     docker-compose -f docker-compose.yml down || true
+                                    sleep 3
                                     
-                                    # 清理未使用的镜像（保留最近 3 个版本）
-                                    docker image prune -f || true
+                                    # 如果镜像存在，使用 --no-build 并强制重新创建；否则使用 --build
+                                    if [ "\$PORTFOLIO_IMAGE_EXISTS" -gt "0" ]; then
+                                        echo "使用已构建的镜像启动服务（强制重新创建容器）..."
+                                        docker-compose -f docker-compose.yml up -d --no-build --force-recreate
+                                    else
+                                        echo "镜像不存在，重新构建镜像..."
+                                        docker-compose -f docker-compose.yml up -d --build --force-recreate
+                                    fi
                                     
-                                    echo "✓ 清理完成"
-                                '''
+                                    echo "等待服务启动..."
+                                    sleep 10
+                                    
+                                    echo "检查服务状态..."
+                                    docker-compose -f docker-compose.yml ps
+                                    
+                                    # 验证容器使用的镜像
+                                    echo ""
+                                    echo "=========================================="
+                                    echo "验证容器使用的镜像:"
+                                    echo "=========================================="
+                                    docker-compose -f docker-compose.yml ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose -f docker-compose.yml ps
+                                    
+                                    # 检查 Portfolio 容器使用的镜像 ID
+                                    echo ""
+                                    echo "Portfolio 容器详细信息:"
+                                    PORTFOLIO_CONTAINER_ID=\$(docker-compose -f docker-compose.yml ps -q portfolio)
+                                    if [ -n "\$PORTFOLIO_CONTAINER_ID" ]; then
+                                        echo "容器 ID: \$PORTFOLIO_CONTAINER_ID"
+                                        echo "容器使用的镜像 ID:"
+                                        docker inspect \$PORTFOLIO_CONTAINER_ID --format='{{.Image}}' || true
+                                        echo "latest 标签指向的镜像 ID:"
+                                        docker images programmer-portfolio:latest --format='{{.ID}}' || true
+                                        echo "容器内文件时间戳:"
+                                        docker exec \$PORTFOLIO_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
+                                    else
+                                        echo "⚠ 警告: Portfolio 容器未找到"
+                                    fi
+                                    echo "=========================================="
+                                """
                             }
-                            
-                            // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
-                            sh """
-                                echo "启动 Portfolio 服务（使用已构建的镜像）..."
-                                echo "Portfolio 镜像: programmer-portfolio:latest"
-                                
-                                # 验证镜像是否存在
-                                PORTFOLIO_IMAGE_EXISTS=\$(docker images | grep -c "programmer-portfolio.*latest" || echo "0")
-                                
-                                if [ "\$PORTFOLIO_IMAGE_EXISTS" -eq "0" ]; then
-                                    echo "⚠ 警告: programmer-portfolio:latest 镜像不存在，将重新构建"
-                                else
-                                    echo "✓ Portfolio 镜像存在: programmer-portfolio:latest"
-                                    echo "Portfolio 镜像详细信息:"
-                                    docker images programmer-portfolio:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
-                                fi
-                                
-                                # 停止并删除现有容器（确保使用新镜像）
-                                echo "停止现有容器..."
-                                docker-compose -f docker-compose.yml down || true
-                                sleep 3
-                                
-                                # 如果镜像存在，使用 --no-build 并强制重新创建；否则使用 --build
-                                if [ "\$PORTFOLIO_IMAGE_EXISTS" -gt "0" ]; then
-                                    echo "使用已构建的镜像启动服务（强制重新创建容器）..."
-                                    docker-compose -f docker-compose.yml up -d --no-build --force-recreate
-                                else
-                                    echo "镜像不存在，重新构建镜像..."
-                                    docker-compose -f docker-compose.yml up -d --build --force-recreate
-                                fi
-                                
-                                echo "等待服务启动..."
-                                sleep 10
-                                
-                                echo "检查服务状态..."
-                                docker-compose -f docker-compose.yml ps
-                                
-                                # 验证容器使用的镜像
-                                echo ""
-                                echo "=========================================="
-                                echo "验证容器使用的镜像:"
-                                echo "=========================================="
-                                docker-compose -f docker-compose.yml ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose -f docker-compose.yml ps
-                                
-                                # 检查 Portfolio 容器使用的镜像 ID
-                                echo ""
-                                echo "Portfolio 容器详细信息:"
-                                PORTFOLIO_CONTAINER_ID=\$(docker-compose -f docker-compose.yml ps -q portfolio)
-                                if [ -n "\$PORTFOLIO_CONTAINER_ID" ]; then
-                                    echo "容器 ID: \$PORTFOLIO_CONTAINER_ID"
-                                    echo "容器使用的镜像 ID:"
-                                    docker inspect \$PORTFOLIO_CONTAINER_ID --format='{{.Image}}' || true
-                                    echo "latest 标签指向的镜像 ID:"
-                                    docker images programmer-portfolio:latest --format='{{.ID}}' || true
-                                    echo "容器内文件时间戳:"
-                                    docker exec \$PORTFOLIO_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
-                                else
-                                    echo "⚠ 警告: Portfolio 容器未找到"
-                                fi
-                                echo "=========================================="
-                            """
                         }
                     }
                 }
