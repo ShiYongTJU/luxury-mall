@@ -145,6 +145,20 @@ export class ProductService {
     // 这里暂时返回 null，因为 JSON 文件更新需要重新实现
     throw new Error('JSON file update not implemented, please use database')
   }
+
+  // 新增商品
+  static async addProduct(product: Omit<Product, 'id'> & { id?: string }): Promise<Product> {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // 如果使用数据库，调用数据库新增函数
+    if (process.env.USE_DATABASE === 'true') {
+      const { addProduct } = await import('../database/pg-db')
+      return await addProduct(product)
+    }
+    
+    // 否则从 JSON 文件新增（需要实现）
+    throw new Error('JSON file add not implemented, please use database')
+  }
 }
 
 

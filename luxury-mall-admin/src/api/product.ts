@@ -80,6 +80,17 @@ export const productApi = {
       console.error('更新商品失败:', error)
       throw error
     }
+  },
+
+  // 新增商品
+  addProduct: async (product: Omit<Product, 'id'> & { id?: string }): Promise<Product> => {
+    try {
+      const response = await axios.post(API_ROUTES.products.add, product)
+      return response.data
+    } catch (error) {
+      console.error('新增商品失败:', error)
+      throw error
+    }
   }
 }
 

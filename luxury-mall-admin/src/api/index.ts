@@ -19,6 +19,7 @@ export const API_ROUTES = {
     list: `${API_BASE_URL}/products`,
     detail: (id: string) => `${API_BASE_URL}/products/${id}`,
     update: `${API_BASE_URL}/updateProducts`,
+    add: `${API_BASE_URL}/addProducts`,
     categories: `${API_BASE_URL}/products/categories`,
     homepage: `${API_BASE_URL}/products/homepage`
   },
@@ -61,6 +62,14 @@ export const API_ROUTES = {
   // 首页相关
   homepage: {
     data: `${API_BASE_URL}/homepage`
+  },
+  
+  // 图片素材相关
+  images: {
+    list: `${API_BASE_URL}/images`,
+    detail: (id: string) => `${API_BASE_URL}/images/${id}`,
+    update: `${API_BASE_URL}/updateImages`,
+    add: `${API_BASE_URL}/addImages`
   }
 } as const
 

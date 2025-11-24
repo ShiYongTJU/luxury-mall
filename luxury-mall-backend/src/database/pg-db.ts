@@ -2,6 +2,7 @@ import { Pool, QueryResult } from 'pg'
 import { User } from '../types/user'
 import { Address, Order, OrderItem } from '../types/address'
 import { Product, Category, HomePageData, PageComponent } from '../types/product'
+import { Image } from '../types/image'
 
 // PostgreSQL 连接池
 let pool: Pool | null = null
@@ -607,6 +608,79 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
   }
 }
 
+// 新增商品
+export async function addProduct(product: Omit<Product, 'id'> & { id?: string }): Promise<Product> {
+  try {
+    // 如果没有提供 ID，生成一个（使用时间戳 + 随机数）
+    const id = product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    const query = `
+      INSERT INTO products (
+        id, name, description, image, price, original_price, tag, 
+        category, sub_category, brand, images, detail_description, 
+        highlights, specs, reviews, services, shipping_info, stock,
+        create_time, update_time
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      )
+      RETURNING *
+    `
+    
+    const values = [
+      id,
+      product.name,
+      product.description || null,
+      product.image,
+      product.price,
+      product.originalPrice || null,
+      product.tag || null,
+      product.category || null,
+      product.subCategory || null,
+      product.brand || null,
+      product.images ? JSON.stringify(product.images) : null,
+      product.detailDescription || null,
+      product.highlights ? JSON.stringify(product.highlights) : null,
+      product.specs ? JSON.stringify(product.specs) : null,
+      product.reviews ? JSON.stringify(product.reviews) : null,
+      product.services ? JSON.stringify(product.services) : null,
+      product.shippingInfo || null,
+      product.stock || 0
+    ]
+    
+    const result = await getPool().query(query, values)
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to create product')
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      image: row.image,
+      price: parseFloat(row.price),
+      originalPrice: row.original_price ? parseFloat(row.original_price) : undefined,
+      tag: row.tag,
+      category: row.category,
+      subCategory: row.sub_category,
+      brand: row.brand,
+      images: row.images ? JSON.parse(row.images) : undefined,
+      detailDescription: row.detail_description,
+      highlights: row.highlights ? JSON.parse(row.highlights) : undefined,
+      specs: row.specs ? JSON.parse(row.specs) : undefined,
+      reviews: row.reviews ? JSON.parse(row.reviews) : undefined,
+      services: row.services ? JSON.parse(row.services) : undefined,
+      shippingInfo: row.shipping_info,
+      stock: row.stock
+    }
+  } catch (error) {
+    console.error('Database addProduct error:', error)
+    throw error
+  }
+}
+
 // 分类相关
 export async function getCategories(): Promise<Category[]> {
   const pool = getPool()
@@ -1029,5 +1103,306 @@ export async function getHomePageData(): Promise<HomePageData> {
   }
   
   return { components }
+}
+
+// ==================== 图片相关 ====================
+
+// 查询图片列表（支持多参数过滤和分页）
+export async function queryImages(
+  params: {
+    name?: string
+    category?: string
+    tags?: string
+    format?: string
+    minWidth?: number
+    maxWidth?: number
+    minHeight?: number
+    maxHeight?: number
+    minSize?: number
+    maxSize?: number
+    startTime?: string
+    endTime?: string
+    page?: number
+    pageSize?: number
+  } = {}
+): Promise<{ images: Image[]; total: number; page: number; pageSize: number }> {
+  const pool = getPool()
+  const { 
+    name, category, tags, format, 
+    minWidth, maxWidth, minHeight, maxHeight,
+    minSize, maxSize, startTime, endTime,
+    page = 1, pageSize = 10 
+  } = params
+  
+  // 构建 WHERE 条件
+  const conditions: string[] = []
+  const values: any[] = []
+  let paramIndex = 1
+  
+  if (name) {
+    conditions.push(`name ILIKE $${paramIndex++}`)
+    values.push(`%${name}%`)
+  }
+  
+  if (category) {
+    conditions.push(`category = $${paramIndex++}`)
+    values.push(category)
+  }
+  
+  if (tags) {
+    conditions.push(`tags ILIKE $${paramIndex++}`)
+    values.push(`%${tags}%`)
+  }
+  
+  if (format) {
+    conditions.push(`format = $${paramIndex++}`)
+    values.push(format.toLowerCase())
+  }
+  
+  if (minWidth !== undefined) {
+    conditions.push(`width >= $${paramIndex++}`)
+    values.push(minWidth)
+  }
+  
+  if (maxWidth !== undefined) {
+    conditions.push(`width <= $${paramIndex++}`)
+    values.push(maxWidth)
+  }
+  
+  if (minHeight !== undefined) {
+    conditions.push(`height >= $${paramIndex++}`)
+    values.push(minHeight)
+  }
+  
+  if (maxHeight !== undefined) {
+    conditions.push(`height <= $${paramIndex++}`)
+    values.push(maxHeight)
+  }
+  
+  if (minSize !== undefined) {
+    conditions.push(`size >= $${paramIndex++}`)
+    values.push(minSize)
+  }
+  
+  if (maxSize !== undefined) {
+    conditions.push(`size <= $${paramIndex++}`)
+    values.push(maxSize)
+  }
+  
+  if (startTime) {
+    conditions.push(`upload_time >= $${paramIndex++}`)
+    values.push(startTime)
+  }
+  
+  if (endTime) {
+    conditions.push(`upload_time <= $${paramIndex++}::date + INTERVAL '1 day'`)
+    values.push(endTime)
+  }
+  
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+  
+  // 查询总数
+  const countQuery = `SELECT COUNT(*) as total FROM images ${whereClause}`
+  const countResult = await pool.query(countQuery, values)
+  const total = parseInt(countResult.rows[0].total, 10)
+  
+  // 查询数据（支持分页）
+  const offset = (page - 1) * pageSize
+  const dataQuery = `
+    SELECT * FROM images 
+    ${whereClause}
+    ORDER BY upload_time DESC
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `
+  const dataValues = [...values, pageSize, offset]
+  const dataResult = await pool.query(dataQuery, dataValues)
+  
+  const images = dataResult.rows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    description: row.description,
+    category: row.category,
+    tags: row.tags,
+    width: row.width,
+    height: row.height,
+    size: row.size,
+    format: row.format,
+    uploadTime: row.upload_time ? new Date(row.upload_time).toISOString() : undefined,
+    updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+  }))
+  
+  return {
+    images,
+    total,
+    page,
+    pageSize
+  }
+}
+
+// 根据 ID 获取图片
+export async function getImageById(id: string): Promise<Image | null> {
+  const result = await getPool().query('SELECT * FROM images WHERE id = $1', [id])
+  if (result.rows.length === 0) {
+    return null
+  }
+  
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    description: row.description,
+    category: row.category,
+    tags: row.tags,
+    width: row.width,
+    height: row.height,
+    size: row.size,
+    format: row.format,
+    uploadTime: row.upload_time ? new Date(row.upload_time).toISOString() : undefined,
+    updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+  }
+}
+
+// 更新图片
+export async function updateImage(id: string, updates: Partial<Image>): Promise<Image | null> {
+  try {
+    const updatesList: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+    
+    if (updates.name !== undefined) {
+      updatesList.push(`name = $${paramIndex++}`)
+      values.push(updates.name)
+    }
+    if (updates.url !== undefined) {
+      updatesList.push(`url = $${paramIndex++}`)
+      values.push(updates.url)
+    }
+    if (updates.description !== undefined) {
+      updatesList.push(`description = $${paramIndex++}`)
+      values.push(updates.description)
+    }
+    if (updates.category !== undefined) {
+      updatesList.push(`category = $${paramIndex++}`)
+      values.push(updates.category)
+    }
+    if (updates.tags !== undefined) {
+      updatesList.push(`tags = $${paramIndex++}`)
+      values.push(updates.tags)
+    }
+    if (updates.width !== undefined) {
+      updatesList.push(`width = $${paramIndex++}`)
+      values.push(updates.width)
+    }
+    if (updates.height !== undefined) {
+      updatesList.push(`height = $${paramIndex++}`)
+      values.push(updates.height)
+    }
+    if (updates.size !== undefined) {
+      updatesList.push(`size = $${paramIndex++}`)
+      values.push(updates.size)
+    }
+    if (updates.format !== undefined) {
+      updatesList.push(`format = $${paramIndex++}`)
+      values.push(updates.format)
+    }
+    
+    if (updatesList.length === 0) {
+      return await getImageById(id)
+    }
+    
+    updatesList.push(`update_time = CURRENT_TIMESTAMP`)
+    const idParamIndex = paramIndex
+    values.push(id)
+    
+    const query = `
+      UPDATE images
+      SET ${updatesList.join(', ')}
+      WHERE id = $${idParamIndex}
+      RETURNING *
+    `
+    const result = await getPool().query(query, values)
+    
+    if (result.rows.length === 0) {
+      return null
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      name: row.name,
+      url: row.url,
+      description: row.description,
+      category: row.category,
+      tags: row.tags,
+      width: row.width,
+      height: row.height,
+      size: row.size,
+      format: row.format,
+      uploadTime: row.upload_time ? new Date(row.upload_time).toISOString() : undefined,
+      updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+    }
+  } catch (error) {
+    console.error('Database updateImage error:', error)
+    throw error
+  }
+}
+
+// 新增图片
+export async function addImage(image: Omit<Image, 'id'> & { id?: string }): Promise<Image> {
+  try {
+    // 如果没有提供 ID，生成一个（使用时间戳 + 随机数）
+    const id = image.id || `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    const query = `
+      INSERT INTO images (
+        id, name, url, description, category, tags, width, height, size, format,
+        upload_time, update_time
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      )
+      RETURNING *
+    `
+    
+    const values = [
+      id,
+      image.name,
+      image.url,
+      image.description || null,
+      image.category || null,
+      image.tags || null,
+      image.width || null,
+      image.height || null,
+      image.size || null,
+      image.format || null
+    ]
+    
+    const result = await getPool().query(query, values)
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to create image')
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      name: row.name,
+      url: row.url,
+      description: row.description,
+      category: row.category,
+      tags: row.tags,
+      width: row.width,
+      height: row.height,
+      size: row.size,
+      format: row.format,
+      uploadTime: row.upload_time ? new Date(row.upload_time).toISOString() : undefined,
+      updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+    }
+  } catch (error) {
+    console.error('Database addImage error:', error)
+    throw error
+  }
 }
 

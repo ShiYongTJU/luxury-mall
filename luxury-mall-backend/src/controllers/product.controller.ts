@@ -138,6 +138,30 @@ export const updateProduct = async (
   }
 }
 
+export const addProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const productData = req.body as Omit<Product, 'id'> & { id?: string }
+    
+    // 验证必填字段
+    if (!productData.name || !productData.image || productData.price === undefined) {
+      const error: AppError = new Error('Product name, image, and price are required')
+      error.statusCode = 400
+      throw error
+    }
+    
+    const product = await ProductService.addProduct(productData)
+    
+    res.status(201).json(product)
+  } catch (error) {
+    console.error('Add product error:', error)
+    next(error)
+  }
+}
+
 
 
 

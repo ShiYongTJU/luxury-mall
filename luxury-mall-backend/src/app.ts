@@ -2,13 +2,16 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import productRoutes from './routes/product.routes'
+import imageRoutes from './routes/image.routes'
 import searchRoutes from './routes/search.routes'
 import orderRoutes from './routes/order.routes'
 import addressRoutes from './routes/address.routes'
 import regionRoutes from './routes/region.routes'
 import userRoutes from './routes/user.routes'
 import homepageRoutes from './routes/homepage.routes'
-import { updateProduct } from './controllers/product.controller'
+import { updateProduct, addProduct } from './controllers/product.controller'
+import { updateImage, addImage } from './controllers/image.controller'
+import { uploadImage } from './controllers/upload.controller'
 import { errorHandler } from './middleware/errorHandler'
 import { initDatabase } from './database/pg-db'
 
@@ -42,6 +45,8 @@ const allowedOrigins = process.env.CORS_ORIGIN
     ]
 
 // 中间件
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 app.use(cors({
   origin: (origin, callback) => {
     // 允许没有origin的请求（如Postman、移动应用等）
@@ -73,8 +78,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
 // 禁用缓存中间件 - 确保所有 API 返回 200 而不是 304
 app.use((req, res, next) => {
@@ -101,6 +106,18 @@ app.use('/api/products', productRoutes)
 // 商品更新接口（统一路径）
 app.put('/api/updateProducts', updateProduct)
 app.post('/api/updateProducts', updateProduct)
+// 商品新增接口（统一路径）
+app.post('/api/addProducts', addProduct)
+app.use('/api/images', imageRoutes)
+// 图片更新接口（统一路径）
+app.put('/api/updateImages', updateImage)
+app.post('/api/updateImages', updateImage)
+// 图片新增接口（统一路径）
+app.post('/api/addImages', addImage)
+// 图片上传接口
+app.post('/api/upload/image', uploadImage)
+// 静态文件服务（用于访问上传的图片）
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 app.use('/api/search', searchRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/orders', orderRoutes)

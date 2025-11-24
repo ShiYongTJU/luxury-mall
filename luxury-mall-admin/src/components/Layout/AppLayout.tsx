@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons'
 import ProductList from '../../pages/Product/ProductList'
 import PageManagement from '../../pages/Operation/PageManagement'
+import ImageList from '../../pages/Operation/ImageList'
 import CarouselManagement from '../../pages/Operation/CarouselManagement'
 import SeckillManagement from '../../pages/Operation/SeckillManagement'
 import GroupbuyManagement from '../../pages/Operation/GroupbuyManagement'
@@ -54,6 +55,16 @@ const sideMenuItems: Record<string, any[]> = {
         {
           key: '/admin/operation/page',
           label: '页面管理'
+        }
+      ]
+    },
+    {
+      key: 'material-management',
+      label: '素材管理',
+      children: [
+        {
+          key: '/admin/operation/image/list',
+          label: '图片列表'
         }
       ]
     },
@@ -124,6 +135,8 @@ function AppLayout() {
       return ['/admin/product/list']
     } else if (path.includes('/admin/operation/page')) {
       return ['/admin/operation/page']
+    } else if (path.includes('/admin/operation/image/list')) {
+      return ['/admin/operation/image/list']
     } else if (path.includes('/admin/operation/carousel')) {
       return ['/admin/operation/carousel']
     } else if (path.includes('/admin/operation/seckill')) {
@@ -149,6 +162,8 @@ function AppLayout() {
       // 根据路径决定展开哪个二级菜单
       if (path.includes('/admin/operation/page')) {
         setOpenKeys(['operation-management'])
+      } else if (path.includes('/admin/operation/image/list')) {
+        setOpenKeys(['material-management'])
       } else if (path.includes('/admin/operation/carousel') || 
                  path.includes('/admin/operation/seckill') || 
                  path.includes('/admin/operation/groupbuy') || 
@@ -156,7 +171,7 @@ function AppLayout() {
                  path.includes('/admin/operation/guessYouLike')) {
         setOpenKeys(['data-source-management'])
       } else {
-        setOpenKeys(['operation-management', 'data-source-management'])
+        setOpenKeys(['operation-management', 'material-management', 'data-source-management'])
       }
     }
   }, [location.pathname])
@@ -257,6 +272,7 @@ function AppLayout() {
           <Routes>
             <Route path="/admin/product/list" element={<ProductList />} />
             <Route path="/admin/operation/page" element={<PageManagement />} />
+            <Route path="/admin/operation/image/list" element={<ImageList />} />
             <Route path="/admin/operation/carousel" element={<CarouselManagement />} />
             <Route path="/admin/operation/seckill" element={<SeckillManagement />} />
             <Route path="/admin/operation/groupbuy" element={<GroupbuyManagement />} />
