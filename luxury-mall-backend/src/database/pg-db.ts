@@ -1406,3 +1406,15 @@ export async function addImage(image: Omit<Image, 'id'> & { id?: string }): Prom
   }
 }
 
+// 删除图片
+export async function deleteImage(id: string): Promise<boolean> {
+  try {
+    const query = 'DELETE FROM images WHERE id = $1'
+    const result = await getPool().query(query, [id])
+    return result.rowCount > 0
+  } catch (error) {
+    console.error('Database deleteImage error:', error)
+    throw error
+  }
+}
+

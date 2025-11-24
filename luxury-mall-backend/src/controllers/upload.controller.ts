@@ -62,3 +62,94 @@ export const uploadImage = async (
   }
 }
 
+// 获取服务器上已上传的图片文件列表
+export const getUploadedImages = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const uploadDir = path.join(__dirname, '../../uploads/images')
+    
+    if (!fs.existsSync(uploadDir)) {
+      return res.json({ files: [] })
+    }
+
+    const files = fs.readdirSync(uploadDir)
+    const imageFiles = files
+      .filter(file => {
+        const filePath = path.join(uploadDir, file)
+        const stats = fs.statSync(filePath)
+        return stats.isFile() && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file)
+      })
+      .map(file => {
+        const filePath = path.join(uploadDir, file)
+        const stats = fs.statSync(filePath)
+        const fileUrl = `/uploads/images/${file}`
+        
+        return {
+          filename: file,
+          url: fileUrl,
+          size: stats.size,
+          uploadTime: stats.birthtime.toISOString(),
+          updateTime: stats.mtime.toISOString()
+        }
+      })
+      .sort((a, b) => new Date(b.uploadTime).getTime() - new Date(a.uploadTime).getTime())
+
+    res.json({ files: imageFiles })
+  } catch (error) {
+    console.error('Get uploaded images error:', error)
+    next(error)
+  }
+}
+
+// 删除服务器上的图片文件
+export const deleteUploadedImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { filename } = req.params
+    
+    if (!filename) {
+      const error: AppError = new Error('文件名不能为空')
+      error.statusCode = 400
+      throw error
+    }
+
+    // 安全检查：防止路径遍历攻击
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      const error: AppError = new Error('无效的文件名')
+      error.statusCode = 400
+      throw error
+    }
+
+    const uploadDir = path.join(__dirname, '../../uploads/images')
+    const filePath = path.join(uploadDir, filename)
+
+    // 检查文件是否存在
+    if (!fs.existsSync(filePath)) {
+      const error: AppError = new Error('文件不存在')
+      error.statusCode = 404
+      throw error
+    }
+
+    // 检查是否是文件（不是目录）
+    const stats = fs.statSync(filePath)
+    if (!stats.isFile()) {
+      const error: AppError = new Error('不是有效的文件')
+      error.statusCode = 400
+      throw error
+    }
+
+    // 删除文件
+    fs.unlinkSync(filePath)
+
+    res.json({ success: true, message: '文件删除成功' })
+  } catch (error) {
+    console.error('Delete uploaded image error:', error)
+    next(error)
+  }
+}

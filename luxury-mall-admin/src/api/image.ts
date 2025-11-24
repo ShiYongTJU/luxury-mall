@@ -48,6 +48,16 @@ export const imageApi = {
       console.error('新增图片失败:', error)
       throw error
     }
+  },
+
+  // 删除图片
+  deleteImage: async (id: string): Promise<void> => {
+    try {
+      await axios.delete(API_ROUTES.images.delete(id))
+    } catch (error) {
+      console.error('删除图片失败:', error)
+      throw error
+    }
   }
 }
 

@@ -12,7 +12,7 @@ import userRoutes from './routes/user.routes'
 import homepageRoutes from './routes/homepage.routes'
 import { updateProduct, addProduct } from './controllers/product.controller'
 import { updateImage, addImage } from './controllers/image.controller'
-import { uploadImage } from './controllers/upload.controller'
+import { uploadImage, getUploadedImages, deleteUploadedImage } from './controllers/upload.controller'
 import { errorHandler } from './middleware/errorHandler'
 import { initDatabase } from './database/pg-db'
 
@@ -117,6 +117,10 @@ app.post('/api/updateImages', updateImage)
 app.post('/api/addImages', addImage)
 // 图片上传接口
 app.post('/api/upload/image', uploadImage)
+// 获取已上传的图片文件列表
+app.get('/api/upload/images', getUploadedImages)
+// 删除已上传的图片文件
+app.delete('/api/upload/images/:filename', deleteUploadedImage)
 // 静态文件服务（用于访问上传的图片）
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 app.use('/api/search', searchRoutes)

@@ -69,7 +69,8 @@ export const API_ROUTES = {
     list: `${API_BASE_URL}/images`,
     detail: (id: string) => `${API_BASE_URL}/images/${id}`,
     update: `${API_BASE_URL}/updateImages`,
-    add: `${API_BASE_URL}/addImages`
+    add: `${API_BASE_URL}/addImages`,
+    delete: (id: string) => `${API_BASE_URL}/images/${id}`
   }
 } as const
 

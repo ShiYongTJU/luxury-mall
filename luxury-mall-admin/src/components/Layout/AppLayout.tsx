@@ -11,6 +11,7 @@ import {
 import ProductList from '../../pages/Product/ProductList'
 import PageManagement from '../../pages/Operation/PageManagement'
 import ImageList from '../../pages/Operation/ImageList'
+import ImageGallery from '../../pages/Operation/ImageGallery'
 import CarouselManagement from '../../pages/Operation/CarouselManagement'
 import SeckillManagement from '../../pages/Operation/SeckillManagement'
 import GroupbuyManagement from '../../pages/Operation/GroupbuyManagement'
@@ -65,6 +66,10 @@ const sideMenuItems: Record<string, any[]> = {
         {
           key: '/admin/operation/image/list',
           label: '图片列表'
+        },
+        {
+          key: '/admin/operation/image/gallery',
+          label: '图片库'
         }
       ]
     },
@@ -273,6 +278,7 @@ function AppLayout() {
             <Route path="/admin/product/list" element={<ProductList />} />
             <Route path="/admin/operation/page" element={<PageManagement />} />
             <Route path="/admin/operation/image/list" element={<ImageList />} />
+            <Route path="/admin/operation/image/gallery" element={<ImageGallery />} />
             <Route path="/admin/operation/carousel" element={<CarouselManagement />} />
             <Route path="/admin/operation/seckill" element={<SeckillManagement />} />
             <Route path="/admin/operation/groupbuy" element={<GroupbuyManagement />} />

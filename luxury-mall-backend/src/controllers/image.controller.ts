@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express'
 import { ImageService } from '../services/image.service'
 import { Image } from '../types/image'
+import fs from 'fs'
+import path from 'path'
 
 interface AppError extends Error {
   statusCode?: number
@@ -140,6 +142,60 @@ export const addImage = async (
     res.status(201).json(image)
   } catch (error) {
     console.error('Add image error:', error)
+    next(error)
+  }
+}
+
+// 删除图片
+export const deleteImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params
+    
+    if (!id) {
+      const error: AppError = new Error('Image ID is required')
+      error.statusCode = 400
+      throw error
+    }
+    
+    // 先获取图片信息，以便删除文件
+    const image = await ImageService.getImageById(id)
+    
+    if (!image) {
+      const error: AppError = new Error('Image not found')
+      error.statusCode = 404
+      throw error
+    }
+    
+    // 删除数据库记录
+    const deleted = await ImageService.deleteImage(id)
+    
+    if (!deleted) {
+      const error: AppError = new Error('Failed to delete image')
+      error.statusCode = 500
+      throw error
+    }
+    
+    // 如果图片 URL 是本地文件（以 /uploads/ 开头），尝试删除文件
+    if (image.url && image.url.startsWith('/uploads/')) {
+      try {
+        const filePath = path.join(__dirname, '../..', image.url)
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath)
+          console.log(`已删除图片文件: ${filePath}`)
+        }
+      } catch (fileError) {
+        // 文件删除失败不影响数据库删除，只记录日志
+        console.warn('删除图片文件失败:', fileError)
+      }
+    }
+    
+    res.json({ success: true, message: 'Image deleted successfully' })
+  } catch (error) {
+    console.error('Delete image error:', error)
     next(error)
   }
 }

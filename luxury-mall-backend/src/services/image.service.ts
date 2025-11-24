@@ -62,5 +62,19 @@ export class ImageService {
     // 否则从 JSON 文件新增（需要实现）
     throw new Error('JSON file add not implemented, please use database')
   }
+
+  // 删除图片
+  static async deleteImage(id: string): Promise<boolean> {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // 如果使用数据库，调用数据库删除函数
+    if (process.env.USE_DATABASE === 'true') {
+      const { deleteImage } = await import('../database/pg-db')
+      return await deleteImage(id)
+    }
+    
+    // 否则从 JSON 文件删除（需要实现）
+    throw new Error('JSON file delete not implemented, please use database')
+  }
 }
 
