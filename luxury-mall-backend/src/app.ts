@@ -8,6 +8,7 @@ import addressRoutes from './routes/address.routes'
 import regionRoutes from './routes/region.routes'
 import userRoutes from './routes/user.routes'
 import homepageRoutes from './routes/homepage.routes'
+import { updateProduct } from './controllers/product.controller'
 import { errorHandler } from './middleware/errorHandler'
 import { initDatabase } from './database/pg-db'
 
@@ -81,6 +82,9 @@ app.get('/health', (req, res) => {
 
 // API 路由
 app.use('/api/products', productRoutes)
+// 商品更新接口（统一路径）
+app.put('/api/updateProducts', updateProduct)
+app.post('/api/updateProducts', updateProduct)
 app.use('/api/search', searchRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/orders', orderRoutes)

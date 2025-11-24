@@ -479,6 +479,129 @@ export async function queryProducts(options: ProductQueryOptions = {}): Promise<
   }
 }
 
+// 更新商品
+export async function updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
+  const updatesList: string[] = []
+  const values: any[] = []
+  let paramIndex = 1
+
+  if (updates.name !== undefined) {
+    updatesList.push(`name = $${paramIndex++}`)
+    values.push(updates.name)
+  }
+  if (updates.description !== undefined) {
+    updatesList.push(`description = $${paramIndex++}`)
+    values.push(updates.description)
+  }
+  if (updates.image !== undefined) {
+    updatesList.push(`image = $${paramIndex++}`)
+    values.push(updates.image)
+  }
+  if (updates.price !== undefined) {
+    updatesList.push(`price = $${paramIndex++}`)
+    values.push(updates.price)
+  }
+  if (updates.originalPrice !== undefined) {
+    updatesList.push(`original_price = $${paramIndex++}`)
+    values.push(updates.originalPrice)
+  }
+  if (updates.tag !== undefined) {
+    updatesList.push(`tag = $${paramIndex++}`)
+    values.push(updates.tag)
+  }
+  if (updates.category !== undefined) {
+    updatesList.push(`category = $${paramIndex++}`)
+    values.push(updates.category)
+  }
+  if (updates.subCategory !== undefined) {
+    updatesList.push(`sub_category = $${paramIndex++}`)
+    values.push(updates.subCategory)
+  }
+  if (updates.brand !== undefined) {
+    updatesList.push(`brand = $${paramIndex++}`)
+    values.push(updates.brand)
+  }
+  if (updates.images !== undefined) {
+    updatesList.push(`images = $${paramIndex++}`)
+    values.push(JSON.stringify(updates.images))
+  }
+  if (updates.detailDescription !== undefined) {
+    updatesList.push(`detail_description = $${paramIndex++}`)
+    values.push(updates.detailDescription)
+  }
+  if (updates.highlights !== undefined) {
+    updatesList.push(`highlights = $${paramIndex++}`)
+    values.push(JSON.stringify(updates.highlights))
+  }
+  if (updates.specs !== undefined) {
+    updatesList.push(`specs = $${paramIndex++}`)
+    values.push(JSON.stringify(updates.specs))
+  }
+  if (updates.reviews !== undefined) {
+    updatesList.push(`reviews = $${paramIndex++}`)
+    values.push(JSON.stringify(updates.reviews))
+  }
+  if (updates.services !== undefined) {
+    updatesList.push(`services = $${paramIndex++}`)
+    values.push(JSON.stringify(updates.services))
+  }
+  if (updates.shippingInfo !== undefined) {
+    updatesList.push(`shipping_info = $${paramIndex++}`)
+    values.push(updates.shippingInfo)
+  }
+  if (updates.stock !== undefined) {
+    updatesList.push(`stock = $${paramIndex++}`)
+    values.push(updates.stock)
+  }
+
+  if (updatesList.length === 0) {
+    // 没有要更新的字段，直接返回原商品
+    return await getProductById(id)
+  }
+
+  // 添加更新时间
+  updatesList.push(`update_time = CURRENT_TIMESTAMP`)
+  
+  // 添加 id 参数
+  const idParamIndex = paramIndex
+  values.push(id)
+  
+  const query = `
+    UPDATE products
+    SET ${updatesList.join(', ')}
+    WHERE id = $${idParamIndex}
+    RETURNING *
+  `
+  
+  const result = await getPool().query(query, values)
+  
+  if (result.rows.length === 0) {
+    return null
+  }
+  
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    image: row.image,
+    price: parseFloat(row.price),
+    originalPrice: row.original_price ? parseFloat(row.original_price) : undefined,
+    tag: row.tag,
+    category: row.category,
+    subCategory: row.sub_category,
+    brand: row.brand,
+    images: row.images ? JSON.parse(row.images) : undefined,
+    detailDescription: row.detail_description,
+    highlights: row.highlights ? JSON.parse(row.highlights) : undefined,
+    specs: row.specs ? JSON.parse(row.specs) : undefined,
+    reviews: row.reviews ? JSON.parse(row.reviews) : undefined,
+    services: row.services ? JSON.parse(row.services) : undefined,
+    shippingInfo: row.shipping_info,
+    stock: row.stock
+  }
+}
+
 // 分类相关
 export async function getCategories(): Promise<Category[]> {
   const pool = getPool()

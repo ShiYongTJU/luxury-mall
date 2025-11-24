@@ -3,13 +3,15 @@ import {
   Table,
   Form,
   Input,
+  InputNumber,
   Button,
   Space,
   Card,
   message,
-  Image
+  Image,
+  Modal
 } from 'antd'
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons'
+import { SearchOutlined, ReloadOutlined, EditOutlined } from '@ant-design/icons'
 import { productApi } from '../../api/product'
 import { Product, ProductQueryParams } from '../../types/product'
 import type { ColumnsType } from 'antd/es/table'
@@ -128,6 +130,72 @@ function ProductList() {
     fetchProducts({}, 1, pagination.pageSize)
   }
 
+  // 编辑相关状态
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [editForm] = Form.useForm()
+
+  // 打开编辑对话框
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product)
+    editForm.setFieldsValue({
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      tag: product.tag,
+      category: product.category,
+      subCategory: product.subCategory,
+      brand: product.brand,
+      stock: product.stock
+    })
+    setEditModalVisible(true)
+  }
+
+  // 保存编辑
+  const handleSaveEdit = async () => {
+    try {
+      const values = await editForm.validateFields()
+      if (!editingProduct) return
+
+      const updates: Partial<Product> = {
+        name: values.name,
+        description: values.description,
+        image: values.image,
+        price: values.price,
+        originalPrice: values.originalPrice,
+        tag: values.tag,
+        category: values.category,
+        subCategory: values.subCategory,
+        brand: values.brand,
+        stock: values.stock
+      }
+
+      await productApi.updateProduct(editingProduct.id, updates)
+      message.success('商品更新成功')
+      setEditModalVisible(false)
+      setEditingProduct(null)
+      editForm.resetFields()
+      
+      // 刷新列表
+      fetchProducts(undefined, pagination.current, pagination.pageSize)
+    } catch (error: any) {
+      if (error.errorFields) {
+        // 表单验证错误
+        return
+      }
+      message.error('更新商品失败：' + (error.message || '未知错误'))
+    }
+  }
+
+  // 取消编辑
+  const handleCancelEdit = () => {
+    setEditModalVisible(false)
+    setEditingProduct(null)
+    editForm.resetFields()
+  }
+
   // 表格列定义
   const columns: ColumnsType<Product> = [
     {
@@ -156,6 +224,7 @@ function ProductList() {
       title: '商品名称',
       dataIndex: 'name',
       key: 'name',
+      width: 200,
       ellipsis: true
     },
     {
@@ -214,6 +283,21 @@ function ProductList() {
       key: 'stock',
       width: 80,
       render: (stock: number) => stock ?? '-'
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      fixed: 'right' as const,
+      render: (_: any, record: Product) => (
+        <Button
+          type="link"
+          icon={<EditOutlined />}
+          onClick={() => handleEdit(record)}
+        >
+          编辑
+        </Button>
+      )
     }
   ]
 
@@ -306,6 +390,109 @@ function ProductList() {
           scroll={{ x: 1200 }}
         />
       </Card>
+
+      {/* 编辑商品对话框 */}
+      <Modal
+        title="编辑商品"
+        open={editModalVisible}
+        onOk={handleSaveEdit}
+        onCancel={handleCancelEdit}
+        width={800}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+        >
+          <Form.Item
+            name="name"
+            label="商品名称"
+            rules={[{ required: true, message: '请输入商品名称' }]}
+          >
+            <Input placeholder="请输入商品名称" />
+          </Form.Item>
+
+          <Form.Item
+            name="description"
+            label="商品描述"
+          >
+            <Input.TextArea rows={3} placeholder="请输入商品描述" />
+          </Form.Item>
+
+          <Form.Item
+            name="image"
+            label="商品图片URL"
+            rules={[{ required: true, message: '请输入商品图片URL' }]}
+          >
+            <Input placeholder="请输入商品图片URL" />
+          </Form.Item>
+
+          <Form.Item
+            name="price"
+            label="价格"
+            rules={[{ required: true, message: '请输入价格' }]}
+          >
+            <InputNumber
+              min={0}
+              precision={2}
+              style={{ width: '100%' }}
+              placeholder="请输入价格"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="originalPrice"
+            label="原价"
+          >
+            <InputNumber
+              min={0}
+              precision={2}
+              style={{ width: '100%' }}
+              placeholder="请输入原价（可选）"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="category"
+            label="分类"
+          >
+            <Input placeholder="请输入分类" />
+          </Form.Item>
+
+          <Form.Item
+            name="subCategory"
+            label="子分类"
+          >
+            <Input placeholder="请输入子分类" />
+          </Form.Item>
+
+          <Form.Item
+            name="brand"
+            label="品牌"
+          >
+            <Input placeholder="请输入品牌" />
+          </Form.Item>
+
+          <Form.Item
+            name="tag"
+            label="标签"
+          >
+            <Input placeholder="请输入标签" />
+          </Form.Item>
+
+          <Form.Item
+            name="stock"
+            label="库存"
+          >
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              placeholder="请输入库存数量"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

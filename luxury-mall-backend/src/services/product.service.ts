@@ -130,6 +130,21 @@ export class ProductService {
     await new Promise(resolve => setTimeout(resolve, 200))
     return await Database.getHomePageData()
   }
+
+  // 更新商品
+  static async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // 如果使用数据库，调用数据库更新函数
+    if (process.env.USE_DATABASE === 'true') {
+      const { updateProduct } = await import('../database/pg-db')
+      return await updateProduct(id, updates)
+    }
+    
+    // 否则从 JSON 文件更新（需要实现）
+    // 这里暂时返回 null，因为 JSON 文件更新需要重新实现
+    throw new Error('JSON file update not implemented, please use database')
+  }
 }
 
 

@@ -97,6 +97,39 @@ export const getHomePageData = async (
   }
 }
 
+export const updateProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // 支持两种方式：路径参数或请求体中的 id
+    const id = req.params.id || req.body.id
+    const updates = req.body as Partial<Product>
+    
+    if (!id) {
+      const error: AppError = new Error('Product ID is required')
+      error.statusCode = 400
+      throw error
+    }
+    
+    // 从 updates 中移除 id（如果存在）
+    const { id: _, ...updateFields } = updates
+    
+    const product = await ProductService.updateProduct(id, updateFields)
+    
+    if (!product) {
+      const error: AppError = new Error('Product not found')
+      error.statusCode = 404
+      throw error
+    }
+    
+    res.json(product)
+  } catch (error) {
+    next(error)
+  }
+}
+
 
 
 
