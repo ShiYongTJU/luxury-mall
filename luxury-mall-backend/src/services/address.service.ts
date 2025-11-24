@@ -43,7 +43,7 @@ export class AddressService {
     const newAddress: Address = {
       ...addressData,
       userId,
-      id: `addr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      id: `addr-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
     }
     
     if (process.env.USE_DATABASE === 'true') {

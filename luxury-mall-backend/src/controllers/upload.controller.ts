@@ -35,7 +35,7 @@ export const uploadImage = async (
     const buffer = Buffer.from(imageData, 'base64')
 
     // 生成文件名
-    const fileName = `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${imageType}`
+    const fileName = `image_${Date.now()}_${Math.random().toString(36).substring(2, 11)}.${imageType}`
     
     // 确保上传目录存在
     const uploadDir = path.join(__dirname, '../../uploads/images')

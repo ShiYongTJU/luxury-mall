@@ -612,7 +612,7 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 export async function addProduct(product: Omit<Product, 'id'> & { id?: string }): Promise<Product> {
   try {
     // 如果没有提供 ID，生成一个（使用时间戳 + 随机数）
-    const id = product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const id = product.id || `product_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     
     const query = `
       INSERT INTO products (
@@ -1353,7 +1353,7 @@ export async function updateImage(id: string, updates: Partial<Image>): Promise<
 export async function addImage(image: Omit<Image, 'id'> & { id?: string }): Promise<Image> {
   try {
     // 如果没有提供 ID，生成一个（使用时间戳 + 随机数）
-    const id = image.id || `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const id = image.id || `image_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     
     const query = `
       INSERT INTO images (

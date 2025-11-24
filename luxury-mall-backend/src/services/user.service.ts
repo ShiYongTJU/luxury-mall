@@ -23,7 +23,7 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(data.password, 10)
     
     const newUser: User = {
-      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       username: data.username,
       phone: data.phone,
       email: data.email,

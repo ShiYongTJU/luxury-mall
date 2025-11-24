@@ -1093,7 +1093,7 @@ function ProductList() {
                                     key={`input_${optionKey}_id`}
                                     size="small"
                                     value={text}
-                                    onChange={(e) => handleUpdateOption(record.key, option._internalKey || option.id, 'id', e.target.value, option.id)}
+                                    onChange={(e) => handleUpdateOption(record.key, option._internalKey || option.id, 'id', e.target.value)}
                                   />
                                 ) : (
                                   <span>{text || '-'}</span>
@@ -1112,7 +1112,7 @@ function ProductList() {
                                     key={`input_${optionKey}_label`}
                                     size="small"
                                     value={text}
-                                    onChange={(e) => handleUpdateOption(record.key, option._internalKey || option.id, 'label', e.target.value, option.id)}
+                                    onChange={(e) => handleUpdateOption(record.key, option._internalKey || option.id, 'label', e.target.value)}
                                     autoFocus
                                   />
                                 ) : (
@@ -1132,7 +1132,7 @@ function ProductList() {
                                     key={`input_${optionKey}_subLabel`}
                                     size="small"
                                     value={text || ''}
-                                    onChange={(e) => handleUpdateOption(record.key, option._internalKey || option.id, 'subLabel', e.target.value, option.id)}
+                                    onChange={(e) => handleUpdateOption(record.key, option._internalKey || option.id, 'subLabel', e.target.value)}
                                   />
                                 ) : (
                                   <span>{text || '-'}</span>
@@ -1178,7 +1178,7 @@ function ProductList() {
                                       danger
                                       size="small"
                                       icon={<DeleteOutlined />}
-                                      onClick={() => handleDeleteOption(record.key, option._internalKey || option.id, option.id)}
+                                      onClick={() => handleDeleteOption(record.key, option._internalKey || option.id)}
                                     >
                                       删除
                                     </Button>
