@@ -722,7 +722,7 @@ EOF
                                             echo "✓ 数据库已就绪"
                                             break
                                         fi
-                                        echo "等待数据库启动... ($i/30)"
+                                        echo "等待数据库启动... (\$i/30)"
                                         sleep 2
                                     done
                                     
