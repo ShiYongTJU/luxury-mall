@@ -71,6 +71,17 @@ export const API_ROUTES = {
     update: `${API_BASE_URL}/updateImages`,
     add: `${API_BASE_URL}/addImages`,
     delete: (id: string) => `${API_BASE_URL}/images/${id}`
+  },
+  
+  // 页面相关
+  pages: {
+    list: `${API_BASE_URL}/pages`,
+    detail: (id: string) => `${API_BASE_URL}/pages/${id}`,
+    create: `${API_BASE_URL}/pages`,
+    update: (id: string) => `${API_BASE_URL}/pages/${id}`,
+    publish: (id: string) => `${API_BASE_URL}/pages/${id}/publish`,
+    operate: (id: string) => `${API_BASE_URL}/pages/${id}/operate`,
+    delete: (id: string) => `${API_BASE_URL}/pages/${id}`
   }
 } as const
 

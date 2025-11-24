@@ -194,4 +194,20 @@ CREATE INDEX idx_images_category ON images(category);
 CREATE INDEX idx_images_tags ON images(tags);
 CREATE INDEX idx_images_upload_time ON images(upload_time);
 
+-- 页面表
+CREATE TABLE IF NOT EXISTS pages (
+    id VARCHAR(100) PRIMARY KEY,
+    page_type VARCHAR(20) NOT NULL, -- 页面类型：homepage（首页）/category（分类页）
+    data_source TEXT, -- 数据源（JSON格式，存储页面配置数据）
+    is_published BOOLEAN DEFAULT FALSE, -- 发布状态
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+    last_operation_time TIMESTAMP, -- 最近操作时间
+    last_operation_type VARCHAR(20) -- 最近操作类型：edit（编辑）/operate（运营）/publish（发布）
+);
+
+CREATE INDEX idx_pages_page_type ON pages(page_type);
+CREATE INDEX idx_pages_is_published ON pages(is_published);
+CREATE INDEX idx_pages_create_time ON pages(create_time);
+CREATE INDEX idx_pages_last_operation_time ON pages(last_operation_time);
+
 

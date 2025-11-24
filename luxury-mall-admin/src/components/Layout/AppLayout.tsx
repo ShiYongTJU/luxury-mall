@@ -69,7 +69,7 @@ const sideMenuItems: Record<string, any[]> = {
         },
         {
           key: '/admin/operation/image/gallery',
-          label: '图片库'
+          label: '静态资源'
         }
       ]
     },

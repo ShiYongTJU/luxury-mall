@@ -3,6 +3,7 @@ import { User } from '../types/user'
 import { Address, Order, OrderItem } from '../types/address'
 import { Product, Category, HomePageData, PageComponent } from '../types/product'
 import { Image } from '../types/image'
+import { Page, PageQueryParams, PageListResponse, CreatePageData, UpdatePageData, LastOperationType } from '../types/page'
 
 // PostgreSQL 连接池
 let pool: Pool | null = null
@@ -1414,6 +1415,290 @@ export async function deleteImage(id: string): Promise<boolean> {
     return result.rowCount > 0
   } catch (error) {
     console.error('Database deleteImage error:', error)
+    throw error
+  }
+}
+
+// ==================== 页面相关操作 ====================
+
+// 查询页面列表
+export async function queryPages(params: PageQueryParams = {}): Promise<PageListResponse> {
+  try {
+    const { pageType, isPublished, page = 1, pageSize = 10 } = params
+    
+    let whereConditions: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+    
+    if (pageType) {
+      whereConditions.push(`page_type = $${paramIndex++}`)
+      values.push(pageType)
+    }
+    
+    if (isPublished !== undefined) {
+      whereConditions.push(`is_published = $${paramIndex++}`)
+      values.push(isPublished)
+    }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+    
+    // 查询总数
+    const countQuery = `SELECT COUNT(*) as total FROM pages ${whereClause}`
+    const countResult = await getPool().query(countQuery, values)
+    const total = parseInt(countResult.rows[0].total, 10)
+    
+    // 查询数据
+    const offset = (page - 1) * pageSize
+    const dataValues = [...values, pageSize, offset]
+    const dataQuery = `
+      SELECT * FROM pages
+      ${whereClause}
+      ORDER BY create_time DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `
+    
+    const dataResult = await getPool().query(dataQuery, dataValues)
+    
+    const pages: Page[] = dataResult.rows.map(row => ({
+      id: row.id,
+      pageType: row.page_type,
+      dataSource: row.data_source,
+      isPublished: row.is_published,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      lastOperationTime: row.last_operation_time ? new Date(row.last_operation_time).toISOString() : undefined,
+      lastOperationType: row.last_operation_type
+    }))
+    
+    return {
+      pages,
+      total,
+      page,
+      pageSize
+    }
+  } catch (error) {
+    console.error('Database queryPages error:', error)
+    throw error
+  }
+}
+
+// 根据ID获取页面
+export async function getPageById(id: string): Promise<Page | null> {
+  try {
+    const query = 'SELECT * FROM pages WHERE id = $1'
+    const result = await getPool().query(query, [id])
+    
+    if (result.rows.length === 0) {
+      return null
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      pageType: row.page_type,
+      dataSource: row.data_source,
+      isPublished: row.is_published,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      lastOperationTime: row.last_operation_time ? new Date(row.last_operation_time).toISOString() : undefined,
+      lastOperationType: row.last_operation_type
+    }
+  } catch (error) {
+    console.error('Database getPageById error:', error)
+    throw error
+  }
+}
+
+// 创建页面
+export async function createPage(pageData: CreatePageData): Promise<Page> {
+  try {
+    const id = `page_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    
+    const query = `
+      INSERT INTO pages (
+        id, page_type, data_source, is_published, create_time
+      ) VALUES (
+        $1, $2, $3, FALSE, CURRENT_TIMESTAMP
+      )
+      RETURNING *
+    `
+    
+    const values = [
+      id,
+      pageData.pageType,
+      pageData.dataSource || null
+    ]
+    
+    const result = await getPool().query(query, values)
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to create page')
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      pageType: row.page_type,
+      dataSource: row.data_source,
+      isPublished: row.is_published,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      lastOperationTime: row.last_operation_time ? new Date(row.last_operation_time).toISOString() : undefined,
+      lastOperationType: row.last_operation_type
+    }
+  } catch (error) {
+    console.error('Database createPage error:', error)
+    throw error
+  }
+}
+
+// 更新页面（编辑操作）
+export async function updatePage(id: string, updates: UpdatePageData, operationType: LastOperationType = 'edit'): Promise<Page | null> {
+  try {
+    const updatesList: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+    
+    if (updates.pageType !== undefined) {
+      updatesList.push(`page_type = $${paramIndex++}`)
+      values.push(updates.pageType)
+    }
+    
+    if (updates.dataSource !== undefined) {
+      updatesList.push(`data_source = $${paramIndex++}`)
+      values.push(updates.dataSource)
+    }
+    
+    // 更新最近操作时间和操作类型
+    updatesList.push(`last_operation_time = CURRENT_TIMESTAMP`)
+    updatesList.push(`last_operation_type = $${paramIndex++}`)
+    values.push(operationType)
+    
+    if (updatesList.length === 0) {
+      return await getPageById(id)
+    }
+    
+    const idParamIndex = paramIndex
+    values.push(id)
+    
+    const query = `
+      UPDATE pages
+      SET ${updatesList.join(', ')}
+      WHERE id = $${idParamIndex}
+      RETURNING *
+    `
+    
+    const result = await getPool().query(query, values)
+    
+    if (result.rows.length === 0) {
+      return null
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      pageType: row.page_type,
+      dataSource: row.data_source,
+      isPublished: row.is_published,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      lastOperationTime: row.last_operation_time ? new Date(row.last_operation_time).toISOString() : undefined,
+      lastOperationType: row.last_operation_type
+    }
+  } catch (error) {
+    console.error('Database updatePage error:', error)
+    throw error
+  }
+}
+
+// 发布页面（将当前页面设为已发布，其他所有页面设为未发布）
+export async function publishPage(id: string): Promise<Page | null> {
+  try {
+    const pool = getPool()
+    
+    // 开始事务：先将所有页面设为未发布，然后将指定页面设为已发布
+    await pool.query('BEGIN')
+    
+    try {
+      // 将所有页面设为未发布
+      await pool.query('UPDATE pages SET is_published = FALSE')
+      
+      // 将指定页面设为已发布，并更新最近操作时间和操作类型
+      const query = `
+        UPDATE pages
+        SET is_published = TRUE,
+            last_operation_time = CURRENT_TIMESTAMP,
+            last_operation_type = 'publish'
+        WHERE id = $1
+        RETURNING *
+      `
+      
+      const result = await pool.query(query, [id])
+      
+      if (result.rows.length === 0) {
+        await pool.query('ROLLBACK')
+        return null
+      }
+      
+      await pool.query('COMMIT')
+      
+      const row = result.rows[0]
+      return {
+        id: row.id,
+        pageType: row.page_type,
+        dataSource: row.data_source,
+        isPublished: row.is_published,
+        createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+        lastOperationTime: row.last_operation_time ? new Date(row.last_operation_time).toISOString() : undefined,
+        lastOperationType: row.last_operation_type
+      }
+    } catch (error) {
+      await pool.query('ROLLBACK')
+      throw error
+    }
+  } catch (error) {
+    console.error('Database publishPage error:', error)
+    throw error
+  }
+}
+
+// 运营操作（更新最近操作时间和操作类型为operate）
+export async function operatePage(id: string): Promise<Page | null> {
+  try {
+    const query = `
+      UPDATE pages
+      SET last_operation_time = CURRENT_TIMESTAMP,
+          last_operation_type = 'operate'
+      WHERE id = $1
+      RETURNING *
+    `
+    
+    const result = await getPool().query(query, [id])
+    
+    if (result.rows.length === 0) {
+      return null
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      pageType: row.page_type,
+      dataSource: row.data_source,
+      isPublished: row.is_published,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      lastOperationTime: row.last_operation_time ? new Date(row.last_operation_time).toISOString() : undefined,
+      lastOperationType: row.last_operation_type
+    }
+  } catch (error) {
+    console.error('Database operatePage error:', error)
+    throw error
+  }
+}
+
+// 删除页面
+export async function deletePage(id: string): Promise<boolean> {
+  try {
+    const query = 'DELETE FROM pages WHERE id = $1'
+    const result = await getPool().query(query, [id])
+    return result.rowCount > 0
+  } catch (error) {
+    console.error('Database deletePage error:', error)
     throw error
   }
 }

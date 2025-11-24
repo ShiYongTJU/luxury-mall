@@ -156,7 +156,7 @@ function ImageGallery() {
     <div style={{ padding: '24px' }}>
       <Card>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>已上传图片文件</h2>
+          <h2 style={{ margin: 0 }}>静态资源</h2>
           <Space>
             {selectedRowKeys.length > 0 && (
               <Popconfirm

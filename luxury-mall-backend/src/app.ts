@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import path from 'path'
 import productRoutes from './routes/product.routes'
 import imageRoutes from './routes/image.routes'
+import pageRoutes from './routes/page.routes'
 import searchRoutes from './routes/search.routes'
 import orderRoutes from './routes/order.routes'
 import addressRoutes from './routes/address.routes'
@@ -110,6 +111,7 @@ app.post('/api/updateProducts', updateProduct)
 // 商品新增接口（统一路径）
 app.post('/api/addProducts', addProduct)
 app.use('/api/images', imageRoutes)
+app.use('/api/pages', pageRoutes)
 // 图片更新接口（统一路径）
 app.put('/api/updateImages', updateImage)
 app.post('/api/updateImages', updateImage)
