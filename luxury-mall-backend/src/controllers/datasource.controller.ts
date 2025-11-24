@@ -29,6 +29,7 @@ export const getDataSourceItems = async (
   try {
     const type = getDataSourceType(req)
     const {
+      id,
       name,
       isEnabled,
       page = '1',
@@ -36,6 +37,7 @@ export const getDataSourceItems = async (
     } = req.query
     
     const params = {
+      id: id as string | undefined,
       name: name as string | undefined,
       isEnabled: isEnabled === 'true' ? true : isEnabled === 'false' ? false : undefined,
       page: parseInt(page as string, 10),
@@ -87,6 +89,24 @@ export const createDataSourceItem = async (
     // 验证必填字段
     if (!itemData.name) {
       const error: AppError = new Error('Name is required')
+      error.statusCode = 400
+      throw error
+    }
+    
+    if (!itemData.dataSourceType) {
+      const error: AppError = new Error('DataSourceType is required')
+      error.statusCode = 400
+      throw error
+    }
+    
+    if (!itemData.abbreviation) {
+      const error: AppError = new Error('Abbreviation is required')
+      error.statusCode = 400
+      throw error
+    }
+    
+    if (itemData.abbreviation.length !== 2) {
+      const error: AppError = new Error('Abbreviation must be exactly 2 characters')
       error.statusCode = 400
       throw error
     }

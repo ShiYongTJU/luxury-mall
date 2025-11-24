@@ -1425,11 +1425,16 @@ export async function deleteImage(id: string): Promise<boolean> {
 // 查询页面列表
 export async function queryPages(params: PageQueryParams = {}): Promise<PageListResponse> {
   try {
-    const { pageType, isPublished, page = 1, pageSize = 10 } = params
+    const { name, pageType, isPublished, page = 1, pageSize = 10 } = params
     
     let whereConditions: string[] = []
     const values: any[] = []
     let paramIndex = 1
+    
+    if (name) {
+      whereConditions.push(`name LIKE $${paramIndex++}`)
+      values.push(`%${name}%`)
+    }
     
     if (pageType) {
       whereConditions.push(`page_type = $${paramIndex++}`)
@@ -1730,12 +1735,17 @@ export async function queryDataSourceItems(
   params: DataSourceQueryParams = {}
 ): Promise<DataSourceListResponse> {
   try {
-    const { name, isEnabled, page = 1, pageSize = 10 } = params
+    const { id, name, isEnabled, page = 1, pageSize = 10 } = params
     const tableName = getTableName(type)
     
     let whereConditions: string[] = []
     const values: any[] = []
     let paramIndex = 1
+    
+    if (id) {
+      whereConditions.push(`id = $${paramIndex++}`)
+      values.push(id)
+    }
     
     if (name) {
       whereConditions.push(`name LIKE $${paramIndex++}`)
@@ -1827,7 +1837,13 @@ export async function createDataSourceItem(
 ): Promise<DataSourceItem> {
   try {
     const tableName = getTableName(type)
-    const id = `${type}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    
+    // 生成ID：abbreviation + 随机数字，总长度不超过10位
+    // 如果abbreviation是2位，则随机数字最多8位
+    const abbreviation = itemData.abbreviation.toUpperCase()
+    const maxRandomLength = 10 - abbreviation.length
+    const randomNum = Math.floor(Math.random() * Math.pow(10, maxRandomLength))
+    const id = `${abbreviation}${randomNum.toString().padStart(maxRandomLength, '0')}`
     
     const query = `
       INSERT INTO ${tableName} (

@@ -14,6 +14,7 @@ export const getPages = async (
 ) => {
   try {
     const {
+      name,
       pageType,
       isPublished,
       page = '1',
@@ -21,6 +22,7 @@ export const getPages = async (
     } = req.query
     
     const params = {
+      name: name as string | undefined,
       pageType: pageType as 'homepage' | 'category' | undefined,
       isPublished: isPublished === 'true' ? true : isPublished === 'false' ? false : undefined,
       page: parseInt(page as string, 10),

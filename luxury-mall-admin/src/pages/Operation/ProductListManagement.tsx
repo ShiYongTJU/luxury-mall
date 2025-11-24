@@ -3,8 +3,6 @@ import {
   Table,
   Form,
   Input,
-  InputNumber,
-  Switch,
   Button,
   Space,
   Card,
@@ -28,6 +26,7 @@ import ProductSelector from '../../components/ProductSelector/ProductSelector'
 import { productApi } from '../../api/product'
 import { Product } from '../../types/product'
 import { getFullImageUrl } from '../../utils/backendUrl'
+import { getDataSourceAbbreviation } from '../../utils/datasource'
 import '../Product/ProductList.css'
 
 function ProductListManagement() {
@@ -100,7 +99,8 @@ function ProductListManagement() {
   const handleSearch = () => {
     const values = form.getFieldsValue()
     queryParamsRef.current = {
-      name: values.name,
+      id: values.id?.trim() || undefined,
+      name: values.name?.trim() || undefined,
       isEnabled: values.isEnabled !== undefined ? values.isEnabled : undefined
     }
     setPagination(prev => ({ ...prev, current: 1 }))
@@ -138,22 +138,14 @@ function ProductListManagement() {
       // 从JSON解析完整商品对象数组
       setSelectedProducts(data.products || [])
       
-      const config = item.config ? JSON.parse(item.config) : {}
       editForm.setFieldsValue({
-        name: item.name,
-        title: config.title,
-        category: data.category,
-        subCategory: data.subCategory,
-        sortOrder: item.sortOrder,
-        isEnabled: item.isEnabled
+        name: item.name
       })
     } catch (e) {
       console.error('解析数据失败:', e)
       setSelectedProducts([])
       editForm.setFieldsValue({
-        name: item.name,
-        sortOrder: item.sortOrder,
-        isEnabled: item.isEnabled
+        name: item.name
       })
     }
     
@@ -202,35 +194,31 @@ function ProductListManagement() {
     try {
       const values = await editForm.validateFields()
       
-      const config = {
-        title: values.title
+      if (selectedProducts.length === 0) {
+        message.warning('请至少添加一个商品')
+        return
       }
       
       const data: ProductListData = {
-        category: values.category,
-        subCategory: values.subCategory,
         products: selectedProducts // 保存完整商品对象数组
       }
       
       const dataStr = JSON.stringify(data)
-      const configStr = JSON.stringify(config)
       
       if (isEditMode && editingItem) {
         await datasourceApi.updateItem('productList', editingItem.id, {
           name: values.name,
-          config: configStr,
-          data: dataStr,
-          sortOrder: values.sortOrder,
-          isEnabled: values.isEnabled
+          data: dataStr
         })
         message.success('更新成功')
       } else {
         await datasourceApi.createItem('productList', {
           name: values.name,
-          config: configStr,
+          dataSourceType: 'productList',
+          abbreviation: getDataSourceAbbreviation('productList'),
           data: dataStr,
-          sortOrder: values.sortOrder || 0,
-          isEnabled: values.isEnabled !== false
+          sortOrder: 0,
+          isEnabled: true
         })
         message.success('创建成功')
       }
@@ -271,6 +259,16 @@ function ProductListManagement() {
 
   // 表格列
   const columns: ColumnsType<DataSourceItem> = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 200,
+      ellipsis: true,
+      render: (id: string) => (
+        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{id}</span>
+      )
+    },
     {
       title: '名称',
       dataIndex: 'name',
@@ -414,6 +412,9 @@ function ProductListManagement() {
           className="product-list-form"
           style={{ marginBottom: 16 }}
         >
+          <Form.Item name="id" label="ID">
+            <Input placeholder="请输入ID" allowClear style={{ width: 200 }} />
+          </Form.Item>
           <Form.Item name="name" label="名称">
             <Input placeholder="请输入名称" allowClear style={{ width: 200 }} />
           </Form.Item>
@@ -487,20 +488,8 @@ function ProductListManagement() {
           >
             <Input placeholder="请输入名称" />
           </Form.Item>
-          
-          <Form.Item name="title" label="标题">
-            <Input placeholder="如：精选商品" />
-          </Form.Item>
 
-          <Form.Item name="category" label="分类">
-            <Input placeholder="请输入分类" />
-          </Form.Item>
-
-          <Form.Item name="subCategory" label="子分类">
-            <Input placeholder="请输入子分类" />
-          </Form.Item>
-
-          <Form.Item label="商品列表">
+          <Form.Item label="商品列表" required>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Button
                 type="dashed"
@@ -543,13 +532,6 @@ function ProductListManagement() {
             </Space>
           </Form.Item>
 
-          <Form.Item name="sortOrder" label="排序" style={{ marginBottom: 8 }}>
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          
-          <Form.Item name="isEnabled" label="启用" valuePropName="checked">
-            <Switch />
-          </Form.Item>
         </Form>
       </Modal>
 

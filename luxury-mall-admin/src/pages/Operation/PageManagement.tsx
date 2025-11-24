@@ -95,6 +95,7 @@ function PageManagement() {
   const handleSearch = () => {
     const values = form.getFieldsValue()
     queryParamsRef.current = {
+      name: values.name?.trim() || undefined,
       pageType: values.pageType,
       isPublished: values.isPublished !== undefined ? values.isPublished : undefined
     }
@@ -205,6 +206,13 @@ function PageManagement() {
   // 表格列
   const columns: ColumnsType<Page> = [
     {
+      title: '页面名称',
+      dataIndex: 'name',
+      key: 'name',
+      width: 200,
+      ellipsis: true
+    },
+    {
       title: '页面类型',
       dataIndex: 'pageType',
       key: 'pageType',
@@ -225,13 +233,6 @@ function PageManagement() {
           {isPublished ? '已发布' : '未发布'}
         </Tag>
       )
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      width: 180,
-      render: (time: string) => time ? new Date(time).toLocaleString('zh-CN') : '-'
     },
     {
       title: '最近操作时间',
@@ -322,6 +323,9 @@ function PageManagement() {
           className="product-list-form"
           style={{ marginBottom: 16 }}
         >
+          <Form.Item name="name" label="页面名称">
+            <Input placeholder="请输入页面名称" allowClear style={{ width: 200 }} />
+          </Form.Item>
           <Form.Item name="pageType" label="页面类型">
             <Select placeholder="请选择页面类型" allowClear style={{ width: 150 }}>
               <Option value="homepage">首页</Option>

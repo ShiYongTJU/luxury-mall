@@ -3,8 +3,6 @@ import {
   Table,
   Form,
   Input,
-  InputNumber,
-  Switch,
   Button,
   Space,
   Card,
@@ -28,6 +26,7 @@ import ProductSelector from '../../components/ProductSelector/ProductSelector'
 import { productApi } from '../../api/product'
 import { Product } from '../../types/product'
 import { getFullImageUrl } from '../../utils/backendUrl'
+import { getDataSourceAbbreviation } from '../../utils/datasource'
 import '../Product/ProductList.css'
 
 function CarouselManagement() {
@@ -101,7 +100,8 @@ function CarouselManagement() {
   const handleSearch = () => {
     const values = form.getFieldsValue()
     queryParamsRef.current = {
-      name: values.name,
+      id: values.id?.trim() || undefined,
+      name: values.name?.trim() || undefined,
       isEnabled: values.isEnabled !== undefined ? values.isEnabled : undefined
     }
     setPagination(prev => ({ ...prev, current: 1 }))
@@ -140,22 +140,14 @@ function CarouselManagement() {
       
       // 注意：轮播图项已经包含图片和标题，不需要额外获取商品信息
       
-      const config = item.config ? JSON.parse(item.config) : {}
       editForm.setFieldsValue({
-        name: item.name,
-        height: config.height || '200px',
-        autoplay: config.autoplay !== false,
-        interval: config.interval || 3000,
-        sortOrder: item.sortOrder,
-        isEnabled: item.isEnabled
+        name: item.name
       })
     } catch (e) {
       console.error('解析数据失败:', e)
       setCarouselItems([])
       editForm.setFieldsValue({
-        name: item.name,
-        sortOrder: item.sortOrder,
-        isEnabled: item.isEnabled
+        name: item.name
       })
     }
     
@@ -204,31 +196,27 @@ function CarouselManagement() {
     try {
       const values = await editForm.validateFields()
       
-      const config = {
-        height: values.height || '200px',
-        autoplay: values.autoplay !== false,
-        interval: values.interval || 3000
+      if (carouselItems.length === 0) {
+        message.warning('请至少添加一个商品')
+        return
       }
       
       const data = JSON.stringify(carouselItems)
-      const configStr = JSON.stringify(config)
       
       if (isEditMode && editingItem) {
         await datasourceApi.updateItem('carousel', editingItem.id, {
           name: values.name,
-          config: configStr,
-          data,
-          sortOrder: values.sortOrder,
-          isEnabled: values.isEnabled
+          data
         })
         message.success('更新成功')
       } else {
         await datasourceApi.createItem('carousel', {
           name: values.name,
-          config: configStr,
+          dataSourceType: 'carousel',
+          abbreviation: getDataSourceAbbreviation('carousel'),
           data,
-          sortOrder: values.sortOrder || 0,
-          isEnabled: values.isEnabled !== false
+          sortOrder: 0,
+          isEnabled: true
         })
         message.success('创建成功')
       }
@@ -269,6 +257,16 @@ function CarouselManagement() {
 
   // 表格列
   const columns: ColumnsType<DataSourceItem> = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 200,
+      ellipsis: true,
+      render: (id: string) => (
+        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{id}</span>
+      )
+    },
     {
       title: '名称',
       dataIndex: 'name',
@@ -371,6 +369,9 @@ function CarouselManagement() {
           className="product-list-form"
           style={{ marginBottom: 16 }}
         >
+          <Form.Item name="id" label="ID">
+            <Input placeholder="请输入ID" allowClear style={{ width: 200 }} />
+          </Form.Item>
           <Form.Item name="name" label="名称">
             <Input placeholder="请输入名称" allowClear style={{ width: 200 }} />
           </Form.Item>
@@ -444,22 +445,8 @@ function CarouselManagement() {
           >
             <Input placeholder="请输入名称" />
           </Form.Item>
-          
-          <Form.Item label="配置">
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Form.Item name="height" label="高度" style={{ marginBottom: 8 }}>
-                <Input placeholder="如：200px" />
-              </Form.Item>
-              <Form.Item name="autoplay" label="自动播放" valuePropName="checked" style={{ marginBottom: 8 }}>
-                <Switch />
-              </Form.Item>
-              <Form.Item name="interval" label="切换间隔(ms)" style={{ marginBottom: 8 }}>
-                <InputNumber min={1000} step={1000} style={{ width: '100%' }} />
-              </Form.Item>
-            </Space>
-          </Form.Item>
 
-          <Form.Item label="轮播图项">
+          <Form.Item label="轮播图项" required>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Button
                 type="dashed"
@@ -500,13 +487,6 @@ function CarouselManagement() {
             </Space>
           </Form.Item>
 
-          <Form.Item name="sortOrder" label="排序" style={{ marginBottom: 8 }}>
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          
-          <Form.Item name="isEnabled" label="启用" valuePropName="checked">
-            <Switch />
-          </Form.Item>
         </Form>
       </Modal>
 

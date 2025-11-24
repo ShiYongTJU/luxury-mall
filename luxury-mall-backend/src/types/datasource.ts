@@ -15,6 +15,7 @@ export interface DataSourceItem {
 
 // 数据源查询参数
 export interface DataSourceQueryParams {
+  id?: string
   name?: string
   isEnabled?: boolean
   page?: number
@@ -32,6 +33,8 @@ export interface DataSourceListResponse {
 // 创建数据源数据
 export interface CreateDataSourceData {
   name: string
+  dataSourceType: DataSourceType
+  abbreviation: string // 两个大写首字母
   config?: string
   data: string
   sortOrder?: number

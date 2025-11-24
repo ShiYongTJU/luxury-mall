@@ -18,6 +18,7 @@ export interface Page {
 
 // 页面查询参数
 export interface PageQueryParams {
+  name?: string
   pageType?: PageType
   isPublished?: boolean
   page?: number
