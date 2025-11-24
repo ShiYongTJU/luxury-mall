@@ -374,15 +374,6 @@ function PageDesignerContent() {
                     : comp
                 )
                 setComponents(newComponents)
-              }
-            }}
-              if (selectedComponent) {
-                const newComponents = components.map(comp =>
-                  comp.id === selectedComponent.id
-                    ? { ...comp, config }
-                    : comp
-                )
-                setComponents(newComponents)
                 setSelectedComponent({ ...selectedComponent, config })
               }
             }}
