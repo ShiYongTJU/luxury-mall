@@ -13,6 +13,7 @@
     "normalize-tags": "ts-node src/scripts/normalize-product-tags.ts",
     "init-images-table": "ts-node scripts/init-images-table.ts",
     "init-database": "ts-node scripts/init-database.ts",
+    "migrate-database": "ts-node scripts/migrate-database.ts",
     "init-database-simple": "ts-node scripts/init-database-simple.ts",
     "create-images-table-only": "ts-node scripts/create-images-table-only.ts",
     "import-unsplash-images": "ts-node scripts/import-unsplash-images.ts"
