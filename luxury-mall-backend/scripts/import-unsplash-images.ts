@@ -42,6 +42,24 @@ async function ensureDatabase() {
 }
 
 /**
+ * 清空图片表
+ */
+async function clearImagesTable() {
+  try {
+    const { getPool } = await import('../src/database/pg-db')
+    const pool = getPool()
+    
+    console.log('正在清空图片表...')
+    const result = await pool.query('DELETE FROM images')
+    console.log(`✓ 已删除 ${result.rowCount} 条记录`)
+    console.log('')
+  } catch (error: any) {
+    console.error('清空图片表失败:', error.message)
+    throw error
+  }
+}
+
+/**
  * 导入图片数据到数据库
  */
 async function importImages() {
@@ -49,6 +67,9 @@ async function importImages() {
     // 确保数据库已初始化
     await ensureDatabase()
     console.log('数据库连接已建立\n')
+    
+    // 清空图片表
+    await clearImagesTable()
     
     // 读取 JSON 文件
     const jsonPath = path.join(__dirname, 'unsplash-images.json')
