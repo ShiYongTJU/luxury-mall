@@ -219,8 +219,8 @@ onMounted(loadProjects)
 }
 
 .featured-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 32px;
 }
 
