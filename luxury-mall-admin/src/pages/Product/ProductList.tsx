@@ -25,63 +25,32 @@ function ProductList() {
     total: 0
   })
 
-  // 获取商品列表
+  // 获取商品列表（从后端查询，支持分页）
   const fetchProducts = async (params?: ProductQueryParams) => {
     setLoading(true)
     try {
-      // 后端目前只支持 category 参数，其他参数在前端过滤
-      const backendParams: any = {}
-      if (params?.category) {
-        backendParams.category = params.category
+      // 构建查询参数，包含分页信息
+      const queryParams: ProductQueryParams = {
+        ...params,
+        page: pagination.current,
+        pageSize: pagination.pageSize
       }
       
-      const data = await productApi.getProducts(backendParams)
-      const products = Array.isArray(data) ? data : []
+      // 调用后端接口查询
+      const result = await productApi.getProducts(queryParams)
       
-      // 前端过滤
-      let filteredProducts = products
-      if (params) {
-        if (params.name) {
-          filteredProducts = filteredProducts.filter(p =>
-            p.name.toLowerCase().includes(params.name!.toLowerCase())
-          )
-        }
-        if (params.subCategory) {
-          filteredProducts = filteredProducts.filter(p =>
-            p.subCategory?.toLowerCase().includes(params.subCategory!.toLowerCase())
-          )
-        }
-        if (params.brand) {
-          filteredProducts = filteredProducts.filter(p =>
-            p.brand?.toLowerCase().includes(params.brand!.toLowerCase())
-          )
-        }
-        if (params.tag) {
-          filteredProducts = filteredProducts.filter(p =>
-            p.tag?.toLowerCase().includes(params.tag!.toLowerCase())
-          )
-        }
-        if (params.minPrice !== undefined) {
-          filteredProducts = filteredProducts.filter(p => p.price >= params.minPrice!)
-        }
-        if (params.maxPrice !== undefined) {
-          filteredProducts = filteredProducts.filter(p => p.price <= params.maxPrice!)
-        }
-        if (params.stock !== undefined && params.stock !== null) {
-          filteredProducts = filteredProducts.filter(p =>
-            p.stock !== undefined && p.stock >= params.stock!
-          )
-        }
-      }
-      
-      // 分页处理
-      const start = (pagination.current - 1) * pagination.pageSize
-      const end = start + pagination.pageSize
-      setProducts(filteredProducts.slice(start, end))
-      setPagination(prev => ({ ...prev, total: filteredProducts.length }))
+      // 设置商品列表和分页信息
+      setProducts(result.products)
+      setPagination(prev => ({
+        ...prev,
+        total: result.total,
+        current: result.page,
+        pageSize: result.pageSize
+      }))
     } catch (error: any) {
       message.error('获取商品列表失败：' + (error.message || '未知错误'))
       setProducts([])
+      setPagination(prev => ({ ...prev, total: 0 }))
     } finally {
       setLoading(false)
     }

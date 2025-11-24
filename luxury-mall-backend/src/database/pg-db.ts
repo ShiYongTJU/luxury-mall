@@ -359,6 +359,126 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 }
 
+// 查询商品（支持多条件查询和分页）
+export interface ProductQueryOptions {
+  name?: string
+  category?: string
+  subCategory?: string
+  brand?: string
+  tag?: string
+  minPrice?: number
+  maxPrice?: number
+  stock?: number
+  page?: number
+  pageSize?: number
+}
+
+export interface ProductQueryResult {
+  products: Product[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export async function queryProducts(options: ProductQueryOptions = {}): Promise<ProductQueryResult> {
+  const {
+    name,
+    category,
+    subCategory,
+    brand,
+    tag,
+    minPrice,
+    maxPrice,
+    stock,
+    page = 1,
+    pageSize = 10
+  } = options
+
+  // 构建 WHERE 条件
+  const conditions: string[] = []
+  const params: any[] = []
+  let paramIndex = 1
+
+  if (name) {
+    conditions.push(`name ILIKE $${paramIndex++}`)
+    params.push(`%${name}%`)
+  }
+  if (category) {
+    conditions.push(`category = $${paramIndex++}`)
+    params.push(category)
+  }
+  if (subCategory) {
+    conditions.push(`sub_category ILIKE $${paramIndex++}`)
+    params.push(`%${subCategory}%`)
+  }
+  if (brand) {
+    conditions.push(`brand ILIKE $${paramIndex++}`)
+    params.push(`%${brand}%`)
+  }
+  if (tag) {
+    conditions.push(`tag ILIKE $${paramIndex++}`)
+    params.push(`%${tag}%`)
+  }
+  if (minPrice !== undefined) {
+    conditions.push(`price >= $${paramIndex++}`)
+    params.push(minPrice)
+  }
+  if (maxPrice !== undefined) {
+    conditions.push(`price <= $${paramIndex++}`)
+    params.push(maxPrice)
+  }
+  if (stock !== undefined && stock !== null) {
+    conditions.push(`stock >= $${paramIndex++}`)
+    params.push(stock)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  // 查询总数
+  const countQuery = `SELECT COUNT(*) as total FROM products ${whereClause}`
+  const countResult = await getPool().query(countQuery, params)
+  const total = parseInt(countResult.rows[0].total)
+
+  // 查询数据（带分页）
+  const offset = (page - 1) * pageSize
+  const dataQuery = `
+    SELECT * FROM products 
+    ${whereClause}
+    ORDER BY create_time DESC
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `
+  const dataParams = [...params, pageSize, offset]
+  const dataResult = await getPool().query(dataQuery, dataParams)
+
+  const products = dataResult.rows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    image: row.image,
+    price: parseFloat(row.price),
+    originalPrice: row.original_price ? parseFloat(row.original_price) : undefined,
+    tag: row.tag,
+    category: row.category,
+    subCategory: row.sub_category,
+    brand: row.brand,
+    images: row.images ? JSON.parse(row.images) : undefined,
+    detailDescription: row.detail_description,
+    highlights: row.highlights ? JSON.parse(row.highlights) : undefined,
+    specs: row.specs ? JSON.parse(row.specs) : undefined,
+    reviews: row.reviews ? JSON.parse(row.reviews) : undefined,
+    services: row.services ? JSON.parse(row.services) : undefined,
+    shippingInfo: row.shipping_info,
+    stock: row.stock
+  }))
+
+  return {
+    products,
+    total,
+    page,
+    pageSize
+  }
+}
+
 // 分类相关
 export async function getCategories(): Promise<Category[]> {
   const pool = getPool()

@@ -8,9 +8,43 @@ export const getProducts = async (
   next: NextFunction
 ) => {
   try {
-    const category = req.query.category as string | undefined
-    const products = await ProductService.getAllProducts(category)
-    res.json(products)
+    // 支持多参数查询
+    const {
+      name,
+      category,
+      subCategory,
+      brand,
+      tag,
+      minPrice,
+      maxPrice,
+      stock,
+      page,
+      pageSize
+    } = req.query
+
+    // 如果没有任何查询参数，使用旧的接口（向后兼容）
+    if (!name && !category && !subCategory && !brand && !tag && 
+        minPrice === undefined && maxPrice === undefined && stock === undefined &&
+        page === undefined && pageSize === undefined) {
+      const products = await ProductService.getAllProducts(category as string | undefined)
+      return res.json(products)
+    }
+
+    // 使用新的查询接口（支持多条件和分页）
+    const result = await ProductService.queryProducts({
+      name: name as string | undefined,
+      category: category as string | undefined,
+      subCategory: subCategory as string | undefined,
+      brand: brand as string | undefined,
+      tag: tag as string | undefined,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      stock: stock !== undefined && stock !== null ? Number(stock) : undefined,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined
+    })
+
+    res.json(result)
   } catch (error) {
     next(error)
   }
