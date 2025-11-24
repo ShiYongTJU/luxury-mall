@@ -1575,6 +1575,11 @@ export async function updatePage(id: string, updates: UpdatePageData, operationT
       values.push(updates.pageType)
     }
     
+    if (updates.dataSource !== undefined) {
+      updatesList.push(`data_source = $${paramIndex++}`)
+      values.push(updates.dataSource)
+    }
+    
     // 更新最近操作时间和操作类型
     updatesList.push(`last_operation_time = CURRENT_TIMESTAMP`)
     updatesList.push(`last_operation_type = $${paramIndex++}`)

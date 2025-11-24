@@ -43,5 +43,6 @@ export interface CreatePageData {
 export interface UpdatePageData {
   name?: string
   pageType?: PageType
+  dataSource?: string // 允许更新数据源（用于页面装修）
 }
 
