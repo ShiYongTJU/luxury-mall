@@ -45,7 +45,6 @@ function CarouselManagement() {
   const [editingItem, setEditingItem] = useState<DataSourceItem | null>(null)
   const [productSelectorVisible, setProductSelectorVisible] = useState(false)
   const [carouselItems, setCarouselItems] = useState<CarouselItemData[]>([])
-  const [products, setProducts] = useState<Record<string, Product>>({})
 
   const queryParamsRef = useRef<DataSourceQueryParams>({})
   const isInitializedRef = useRef(false)
@@ -55,25 +54,6 @@ function CarouselManagement() {
     paginationRef.current = pagination
   }, [pagination])
 
-  // 获取商品信息
-  const fetchProducts = async (productIds: string[]) => {
-    try {
-      const productMap: Record<string, Product> = {}
-      for (const id of productIds) {
-        try {
-          const product = await productApi.getProductById(id)
-          if (product) {
-            productMap[id] = product
-          }
-        } catch (e) {
-          console.warn(`获取商品 ${id} 失败:`, e)
-        }
-      }
-      setProducts(prev => ({ ...prev, ...productMap }))
-    } catch (error) {
-      console.error('获取商品信息失败:', error)
-    }
-  }
 
   // 获取轮播图列表
   const fetchItems = async (page?: number, pageSize?: number) => {
@@ -90,23 +70,7 @@ function CarouselManagement() {
 
       setItems(result.items)
 
-      // 解析所有商品ID并获取商品信息
-      const allProductIds = new Set<string>()
-      result.items.forEach(item => {
-        try {
-          const data = JSON.parse(item.data) as CarouselItemData[]
-          data.forEach(carouselItem => {
-            if (carouselItem.productId) {
-              allProductIds.add(carouselItem.productId)
-            }
-          })
-        } catch (e) {
-          console.error('解析数据失败:', e)
-        }
-      })
-      if (allProductIds.size > 0) {
-        await fetchProducts(Array.from(allProductIds))
-      }
+      // 注意：轮播图项已经包含图片和标题，不需要额外获取商品信息
 
       setPagination({
         total: result.total,
@@ -178,11 +142,7 @@ function CarouselManagement() {
       const data = JSON.parse(item.data) as CarouselItemData[]
       setCarouselItems(data)
       
-      // 获取商品信息
-      const productIds = data.filter(item => item.productId).map(item => item.productId!)
-      if (productIds.length > 0) {
-        fetchProducts(productIds)
-      }
+      // 注意：轮播图项已经包含图片和标题，不需要额外获取商品信息
       
       const config = item.config ? JSON.parse(item.config) : {}
       editForm.setFieldsValue({
@@ -208,7 +168,7 @@ function CarouselManagement() {
 
   // 从商品选择
   const handleSelectProducts = async (productIds: string[]) => {
-    // 先获取商品信息
+    // 获取商品信息并创建轮播图项
     const productMap: Record<string, Product> = {}
     for (const id of productIds) {
       try {
@@ -220,9 +180,6 @@ function CarouselManagement() {
         console.warn(`获取商品 ${id} 失败:`, e)
       }
     }
-    
-    // 更新products状态
-    setProducts(prev => ({ ...prev, ...productMap }))
     
     // 创建轮播图项
     const newItems: CarouselItemData[] = productIds.map(id => {
@@ -517,7 +474,7 @@ function CarouselManagement() {
                 从商品列表添加
               </Button>
               
-              {carouselItems.map((item, index) => (
+              {carouselItems.map((item) => (
                 <Card key={item.id} size="small" style={{ marginTop: 8 }}>
                   <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                     <Space>

@@ -68,17 +68,6 @@ export const productApi = {
     }
   },
 
-  // 根据ID获取商品
-  getProductById: async (id: string): Promise<Product | null> => {
-    try {
-      const response = await axios.get(API_ROUTES.products.detail(id))
-      return response.data
-    } catch (error) {
-      console.error(`获取商品 ${id} 失败:`, error)
-      return null
-    }
-  },
-
   // 更新商品
   updateProduct: async (id: string, updates: Partial<Product>): Promise<Product> => {
     try {

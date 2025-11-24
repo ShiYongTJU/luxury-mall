@@ -7,10 +7,9 @@ import {
   Button,
   Space,
   Image as AntImage,
-  message,
-  Tag
+  message
 } from 'antd'
-import { SearchOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons'
+import { SearchOutlined, ReloadOutlined } from '@ant-design/icons'
 import { productApi } from '../../api/product'
 import { Product, ProductQueryParams } from '../../types/product'
 import type { ColumnsType } from 'antd/es/table'
@@ -36,7 +35,6 @@ function ProductSelector({ open, onCancel, onSelect, multiple = true, title = 'é
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   
   const queryParamsRef = useRef<ProductQueryParams>({})
-  const isInitializedRef = useRef(false)
   const paginationRef = useRef(pagination)
 
   useEffect(() => {

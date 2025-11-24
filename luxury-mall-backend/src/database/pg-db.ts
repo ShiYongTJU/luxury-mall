@@ -1496,6 +1496,7 @@ export async function getPageById(id: string): Promise<Page | null> {
     const row = result.rows[0]
     return {
       id: row.id,
+      name: row.name,
       pageType: row.page_type,
       dataSource: row.data_source,
       isPublished: row.is_published,
