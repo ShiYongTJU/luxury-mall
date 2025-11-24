@@ -19,9 +19,9 @@ const mockProjects = [
       '采用低代码设计理念，实现页面可视化装修功能，支持拖拽式组件配置、实时预览、样式自定义。集成 React DnD 实现拖拽排序，支持轮播图、秒杀、团购、商品列表等多种业务组件。提供完整的数据源管理系统，支持商品、图片、静态资源统一管理。采用多级菜单导航、权限控制、响应式布局，使用 PostgreSQL 数据库实现数据持久化，支持 Docker 容器化部署。',
     tags: ['React', 'TypeScript', 'Ant Design', 'React DnD', '低代码', '可视化装修', 'PostgreSQL', 'Docker'],
     role: '全栈开发',
-    timeline: '2024 · 企业级后台系统',
+    timeline: '2025 · 企业级后台系统',
     links: {
-      demo: 'http://1.15.93.186:80',
+      demo: 'http://1.15.93.186:3002',
       repo: 'https://gitee.com/shikii/luxury-mall'
     }
   },
@@ -35,7 +35,7 @@ const mockProjects = [
       '采用 React Hooks、Context API 进行状态管理，实现商品浏览、购物车、订单管理、地址管理等核心功能。支持深色模式、响应式设计，使用 Vite 构建工具优化开发体验和构建性能。',
     tags: ['React', 'TypeScript', 'Vite', 'Context API', '深色模式'],
     role: '前端开发',
-    timeline: '2024 · 电商项目',
+    timeline: '2025 · 电商项目',
     links: {
       demo: 'http://1.15.93.186:80',
       repo: 'https://gitee.com/shikii/luxury-mall'
@@ -51,7 +51,7 @@ const mockProjects = [
       '采用 Express 框架构建 RESTful API，使用 TypeScript 保证类型安全，PostgreSQL 存储数据。实现用户认证、商品管理、订单处理、地址管理等核心业务逻辑，支持 JWT 认证和数据库持久化。',
     tags: ['Express', 'TypeScript', 'PostgreSQL', 'JWT', 'RESTful API'],
     role: '后端开发',
-    timeline: '2024 · 电商项目',
+    timeline: '2025 · 电商项目',
     links: {
       demo: 'http://1.15.93.186:80',
       repo: 'https://gitee.com/shikii/luxury-mall'
@@ -67,7 +67,7 @@ const mockProjects = [
       '使用 Jenkins Pipeline 编写 Groovy 脚本，实现多项目并行构建、Docker 镜像构建、自动化测试、代码质量检查等功能。支持多环境部署（开发/生产），集成 Docker Compose 进行容器编排，实现一键部署和回滚。',
     tags: ['Jenkins', 'CI/CD', 'Docker', 'Pipeline', '自动化部署'],
     role: 'DevOps 工程师',
-    timeline: '2024 · 基础设施',
+    timeline: '2025 · 基础设施',
     links: {
       demo: 'http://1.15.93.186:8080/jenkins',
       repo: 'https://gitee.com/shikii/luxury-mall'
