@@ -22,35 +22,37 @@
     </section>
 
     <section v-else class="content-area">
-      <article v-if="featuredProject" class="feature-card">
-        <div class="feature-cover">
-          <img :src="featuredProject.cover" :alt="featuredProject.title" loading="lazy" />
-          <span class="badge">重点案例</span>
-        </div>
-        <div class="feature-body">
-          <p class="timeline">{{ featuredProject.timeline }}</p>
-          <h2>{{ featuredProject.title }}</h2>
-          <p class="summary">{{ featuredProject.summary }}</p>
-          <p class="description">{{ featuredProject.description }}</p>
-          <ul class="tag-list">
-            <li v-for="tag in featuredProject.tags" :key="tag">{{ tag }}</li>
-          </ul>
-          <div class="feature-meta">
-            <div>
-              <p class="meta-label">角色定位</p>
-              <p class="meta-value">{{ featuredProject.role }}</p>
-            </div>
-            <div class="feature-links">
-              <a :href="featuredProject.links.demo" target="_blank" rel="noopener noreferrer">
-                在线演示
-              </a>
-              <a :href="featuredProject.links.repo" target="_blank" rel="noopener noreferrer">
-                查看代码
-              </a>
+      <div class="featured-section">
+        <article v-for="project in featuredProjects" :key="project.id" class="feature-card">
+          <div class="feature-cover">
+            <img :src="project.cover" :alt="project.title" loading="lazy" />
+            <span class="badge">重点案例</span>
+          </div>
+          <div class="feature-body">
+            <p class="timeline">{{ project.timeline }}</p>
+            <h2>{{ project.title }}</h2>
+            <p class="summary">{{ project.summary }}</p>
+            <p class="description">{{ project.description }}</p>
+            <ul class="tag-list">
+              <li v-for="tag in project.tags" :key="tag">{{ tag }}</li>
+            </ul>
+            <div class="feature-meta">
+              <div>
+                <p class="meta-label">角色定位</p>
+                <p class="meta-value">{{ project.role }}</p>
+              </div>
+              <div class="feature-links">
+                <a :href="project.links.demo" target="_blank" rel="noopener noreferrer">
+                  在线演示
+                </a>
+                <a :href="project.links.repo" target="_blank" rel="noopener noreferrer">
+                  查看代码
+                </a>
+              </div>
             </div>
           </div>
-        </div>
-      </article>
+        </article>
+      </div>
 
       <div class="grid">
         <article v-for="project in gridProjects" :key="project.id" class="card">
@@ -84,7 +86,7 @@ import { computed, onMounted, ref } from 'vue'
 import { fetchProjects } from './services/projectService'
 
 const projects = ref([])
-const featuredProject = ref(null)
+const featuredProjects = ref([])
 const loading = ref(true)
 const error = ref('')
 
@@ -94,7 +96,8 @@ const loadProjects = async () => {
   try {
     const data = await fetchProjects()
     projects.value = data.projects
-    featuredProject.value = data.featured
+    // 支持单个或数组格式的重点案例
+    featuredProjects.value = Array.isArray(data.featured) ? data.featured : [data.featured]
   } catch (err) {
     error.value = '获取作品数据失败，请稍后重试。'
     if (process.env.NODE_ENV !== 'production') {
@@ -106,9 +109,10 @@ const loadProjects = async () => {
   }
 }
 
-const gridProjects = computed(() =>
-  projects.value.filter((item) => item.id !== featuredProject.value?.id)
-)
+const gridProjects = computed(() => {
+  const featuredIds = featuredProjects.value.map(p => p.id)
+  return projects.value.filter((item) => !featuredIds.includes(item.id))
+})
 
 onMounted(loadProjects)
 </script>
@@ -211,6 +215,12 @@ onMounted(loadProjects)
 .content-area {
   display: flex;
   flex-direction: column;
+  gap: 32px;
+}
+
+.featured-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 32px;
 }
 
@@ -395,6 +405,11 @@ onMounted(loadProjects)
 @media (max-width: 640px) {
   .app-shell {
     padding: 32px 16px 48px;
+  }
+
+  .featured-section {
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 
   .feature-card {

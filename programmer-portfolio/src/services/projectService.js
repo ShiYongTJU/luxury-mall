@@ -10,6 +10,22 @@ const mock = new MockAdapter(apiClient, { delayResponse: 500 })
 
 const mockProjects = [
   {
+    id: 'luxury-mall-admin',
+    title: 'Luxury Mall · 管理后台系统',
+    cover:
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
+    summary: '基于 React + TypeScript + Ant Design 构建的企业级管理后台，提供页面可视化装修、数据源管理、商品管理等核心功能。',
+    description:
+      '采用低代码设计理念，实现页面可视化装修功能，支持拖拽式组件配置、实时预览、样式自定义。集成 React DnD 实现拖拽排序，支持轮播图、秒杀、团购、商品列表等多种业务组件。提供完整的数据源管理系统，支持商品、图片、静态资源统一管理。采用多级菜单导航、权限控制、响应式布局，使用 PostgreSQL 数据库实现数据持久化，支持 Docker 容器化部署。',
+    tags: ['React', 'TypeScript', 'Ant Design', 'React DnD', '低代码', '可视化装修', 'PostgreSQL', 'Docker'],
+    role: '全栈开发',
+    timeline: '2024 · 企业级后台系统',
+    links: {
+      demo: 'http://1.15.93.186:80',
+      repo: 'https://gitee.com/shikii/luxury-mall'
+    }
+  },
+  {
     id: 'luxury-mall-frontend',
     title: 'Luxury Mall · 奢侈品商城前端',
     cover:
@@ -60,7 +76,7 @@ const mockProjects = [
 ]
 
 mock.onGet('/api/projects').reply(200, {
-  featured: mockProjects[0], // 将第一个项目（前端项目）设为重点案例
+  featured: [mockProjects[0], mockProjects[1]], // 将前两个项目设为重点案例
   projects: mockProjects
 })
 
