@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Table,
   Form,
@@ -24,16 +24,40 @@ function ProductList() {
     pageSize: 10,
     total: 0
   })
+  
+  // 保存查询参数，避免重复查询
+  const queryParamsRef = useRef<ProductQueryParams>({})
+  // 标记是否已初始化，避免初始加载和分页变化冲突
+  const isInitializedRef = useRef(false)
+  // 保存分页信息到 ref，避免闭包问题
+  const paginationRef = useRef(pagination)
+
+  // 更新 pagination ref
+  useEffect(() => {
+    paginationRef.current = pagination
+  }, [pagination])
 
   // 获取商品列表（从后端查询，支持分页）
-  const fetchProducts = async (params?: ProductQueryParams) => {
+  const fetchProducts = async (
+    searchParams?: ProductQueryParams,
+    page?: number,
+    pageSize?: number
+  ) => {
     setLoading(true)
     try {
-      // 构建查询参数，包含分页信息
+      // 如果有新的查询参数，更新 ref
+      if (searchParams !== undefined) {
+        queryParamsRef.current = searchParams
+      }
+      
+      // 构建查询参数，优先使用传入的分页参数，否则使用 ref 中的分页状态
+      const currentPage = page !== undefined ? page : paginationRef.current.current
+      const currentPageSize = pageSize !== undefined ? pageSize : paginationRef.current.pageSize
+      
       const queryParams: ProductQueryParams = {
-        ...params,
-        page: pagination.current,
-        pageSize: pagination.pageSize
+        ...queryParamsRef.current,
+        page: currentPage,
+        pageSize: currentPageSize
       }
       
       // 调用后端接口查询
@@ -41,12 +65,14 @@ function ProductList() {
       
       // 设置商品列表和分页信息
       setProducts(result.products)
-      setPagination(prev => ({
-        ...prev,
+      setPagination({
         total: result.total,
         current: result.page,
         pageSize: result.pageSize
-      }))
+      })
+      
+      // 标记已初始化
+      isInitializedRef.current = true
     } catch (error: any) {
       message.error('获取商品列表失败：' + (error.message || '未知错误'))
       setProducts([])
@@ -58,7 +84,19 @@ function ProductList() {
 
   // 初始加载
   useEffect(() => {
-    fetchProducts()
+    if (!isInitializedRef.current) {
+      fetchProducts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 只在组件挂载时执行一次
+
+  // 分页变化时查询（使用最新的查询参数）
+  useEffect(() => {
+    // 只有在已初始化后才响应分页变化
+    if (isInitializedRef.current) {
+      fetchProducts(undefined, pagination.current, pagination.pageSize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.current, pagination.pageSize])
 
   // 查询
@@ -77,15 +115,17 @@ function ProductList() {
       params.stock = Number(values.stock)
     }
 
+    // 重置到第一页并查询
     setPagination(prev => ({ ...prev, current: 1 }))
-    fetchProducts(params)
+    fetchProducts(params, 1, pagination.pageSize)
   }
 
   // 重置
   const handleReset = () => {
     form.resetFields()
+    queryParamsRef.current = {}
     setPagination(prev => ({ ...prev, current: 1 }))
-    fetchProducts()
+    fetchProducts({}, 1, pagination.pageSize)
   }
 
   // 表格列定义
