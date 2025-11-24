@@ -21,7 +21,8 @@ import {
   Image as AntImage,
   Collapse,
   Row,
-  Col
+  Col,
+  Popconfirm
 } from 'antd'
 import {
   ArrowLeftOutlined,
@@ -214,17 +215,31 @@ function PreviewComponentItem({
             <div style={{ fontSize: '12px', color: '#999' }}>排序: {component.sortOrder}</div>
           </div>
         </Space>
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={(e) => {
-            e.stopPropagation()
+        <Popconfirm
+          title="确定要删除这个组件吗？"
+          description="删除后无法恢复，请谨慎操作"
+          onConfirm={(e) => {
+            e?.stopPropagation()
             onDelete()
           }}
+          okText="确定"
+          cancelText="取消"
+          okButtonProps={{ danger: true }}
+          onCancel={(e) => {
+            e?.stopPropagation()
+          }}
         >
-          删除
-        </Button>
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={(e) => {
+              e.stopPropagation()
+            }}
+          >
+            删除
+          </Button>
+        </Popconfirm>
       </Space>
     </div>
   )
@@ -1107,6 +1122,22 @@ function PageDesignerContent() {
           <div style={{ padding: '16px' }}>
             <Title level={5}>组件库</Title>
             <Divider style={{ margin: '12px 0' }} />
+            <style>{`
+              .ant-collapse-item {
+                margin-bottom: 0 !important;
+                border-bottom: none !important;
+              }
+              .ant-collapse-item:last-child {
+                margin-bottom: 0 !important;
+              }
+              .ant-collapse-header {
+                padding: 8px 0 !important;
+              }
+              .ant-collapse-content-box {
+                padding-top: 4px !important;
+                padding-bottom: 4px !important;
+              }
+            `}</style>
             <Collapse
               defaultActiveKey={COMPONENT_CATEGORIES.map(cat => cat.key)}
               items={COMPONENT_CATEGORIES.map(category => ({
@@ -1134,12 +1165,16 @@ function PageDesignerContent() {
                   width: '16px',
                   height: '16px',
                   borderRadius: '50%',
-                  background: isActive ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f5f7fa',
+                  background: isActive 
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                    : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                   transition: 'all 0.3s ease',
-                  color: isActive ? '#fff' : '#8c8c8c',
+                  color: '#fff',
                   fontSize: '10px',
                   fontWeight: 'bold',
-                  boxShadow: isActive ? '0 2px 6px rgba(102, 126, 234, 0.25)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+                  boxShadow: isActive 
+                    ? '0 2px 6px rgba(102, 126, 234, 0.25)' 
+                    : '0 2px 6px rgba(245, 87, 108, 0.25)'
                 }}>
                   {isActive ? '−' : '+'}
                 </div>
