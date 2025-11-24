@@ -532,18 +532,41 @@ EOF
                                 echo "开发环境，跳过 .env 文件创建（使用 JSON 文件存储）"
                             }
                             
-                            // 清理旧容器和镜像（如果启用）
+                            // 清理旧容器和镜像（如果启用，只清理勾选的项目）
                             if (params.CLEAN_BUILD) {
-                                sh '''
-                                    echo "清理旧的容器和镜像..."
-                                    docker-compose -f docker-compose.yml -f docker-compose.prod.yml down || true
-                                    docker-compose -f docker-compose.yml -f docker-compose.dev.yml down || true
+                                sh """
+                                    echo "清理旧的容器和镜像（仅清理勾选的项目）..."
                                     
-                                    # 清理未使用的镜像（保留最近 3 个版本）
-                                    docker image prune -f || true
+                                    BUILD_BACKEND="${params.BUILD_BACKEND}"
+                                    BUILD_FRONTEND="${params.BUILD_FRONTEND}"
                                     
-                                    echo "✓ 清理完成"
-                                '''
+                                    # 根据勾选的项目清理对应的服务
+                                    if [ "\$BUILD_BACKEND" = "true" ] || [ "\$BUILD_FRONTEND" = "true" ]; then
+                                        # 停止并删除对应服务的容器
+                                        if [ "\$BUILD_BACKEND" = "true" ]; then
+                                            echo "清理后端服务..."
+                                            docker-compose -f docker-compose.yml -f docker-compose.prod.yml stop backend || true
+                                            docker-compose -f docker-compose.yml -f docker-compose.prod.yml rm -f backend || true
+                                            docker-compose -f docker-compose.yml -f docker-compose.dev.yml stop backend || true
+                                            docker-compose -f docker-compose.yml -f docker-compose.dev.yml rm -f backend || true
+                                        fi
+                                        
+                                        if [ "\$BUILD_FRONTEND" = "true" ]; then
+                                            echo "清理前端服务..."
+                                            docker-compose -f docker-compose.yml -f docker-compose.prod.yml stop frontend || true
+                                            docker-compose -f docker-compose.yml -f docker-compose.prod.yml rm -f frontend || true
+                                            docker-compose -f docker-compose.yml -f docker-compose.dev.yml stop frontend || true
+                                            docker-compose -f docker-compose.yml -f docker-compose.dev.yml rm -f frontend || true
+                                        fi
+                                        
+                                        # 清理未使用的镜像（保留最近 3 个版本）
+                                        docker image prune -f || true
+                                        
+                                        echo "✓ 清理完成"
+                                    else
+                                        echo "没有勾选任何项目，跳过清理"
+                                    fi
+                                """
                             }
                             
                             // 根据环境选择配置文件
@@ -554,21 +577,33 @@ EOF
                             sh """
                                 echo "使用配置文件: ${composeFiles}"
                                 
-                                # 如果启用重启服务，先停止现有容器（确保重新读取 .env 文件）
+                                # 如果启用重启服务，先停止现有容器（仅停止勾选的服务）
                                 if [ "${params.RESTART_SERVICES}" = "true" ]; then
-                                    echo "重启服务模式：停止现有容器..."
-                                    docker-compose ${composeFiles} down || true
+                                    echo "重启服务模式：停止现有容器（仅勾选的服务）..."
+                                    BUILD_BACKEND="${params.BUILD_BACKEND}"
+                                    BUILD_FRONTEND="${params.BUILD_FRONTEND}"
+                                    
+                                    if [ "\$BUILD_BACKEND" = "true" ]; then
+                                        docker-compose ${composeFiles} stop backend || true
+                                    fi
+                                    if [ "\$BUILD_FRONTEND" = "true" ]; then
+                                        docker-compose ${composeFiles} stop frontend || true
+                                    fi
                                     sleep 5
                                     echo "✓ 容器已停止"
                                 fi
                                 
-                                # 如果启用重置数据库，删除数据卷（仅生产环境）
-                                if [ "${params.RESET_DATABASE}" = "true" ] && [ "${deployEnv}" = "production" ]; then
+                                # 如果启用重置数据库，删除数据卷（仅生产环境，且仅当勾选了后端时）
+                                if [ "${params.RESET_DATABASE}" = "true" ] && [ "${deployEnv}" = "production" ] && [ "${params.BUILD_BACKEND}" = "true" ]; then
                                     echo "⚠ 警告: 重新初始化数据库（删除所有数据）"
-                                    docker-compose ${composeFiles} down || true
+                                    echo "⚠ 注意: 此操作仅在勾选了 BUILD_BACKEND 时执行"
+                                    docker-compose ${composeFiles} stop backend postgres || true
+                                    docker-compose ${composeFiles} rm -f backend postgres || true
                                     docker volume rm luxury-mall_postgres_data 2>/dev/null || true
                                     echo "✓ 数据卷已删除"
                                     sleep 3
+                                elif [ "${params.RESET_DATABASE}" = "true" ] && [ "${params.BUILD_BACKEND}" != "true" ]; then
+                                    echo "⚠ 注意: RESET_DATABASE 已启用，但 BUILD_BACKEND 未勾选，跳过数据库重置"
                                 fi
                                 
                                 # 启动服务（使用 Jenkins 构建的镜像，不重新构建）
@@ -602,23 +637,38 @@ EOF
                                     fi
                                 fi
                                 
-                                # 停止并删除现有容器（确保使用新镜像）
-                                echo "停止现有容器..."
-                                docker-compose ${composeFiles} down || true
+                                # 停止并删除现有容器（仅停止勾选的服务，不影响未勾选的服务）
+                                echo "停止现有容器（仅勾选的服务）..."
+                                
+                                # 只停止和删除勾选的服务
+                                if [ "\$BUILD_BACKEND" = "true" ]; then
+                                    echo "停止后端服务..."
+                                    docker-compose ${composeFiles} stop backend || true
+                                    docker-compose ${composeFiles} rm -f backend || true
+                                fi
+                                
+                                if [ "\$BUILD_FRONTEND" = "true" ]; then
+                                    echo "停止前端服务..."
+                                    docker-compose ${composeFiles} stop frontend || true
+                                    docker-compose ${composeFiles} rm -f frontend || true
+                                fi
+                                
+                                # 如果重置数据库且勾选了后端，停止 postgres
+                                if [ "${params.RESET_DATABASE}" = "true" ] && [ "${deployEnv}" = "production" ] && [ "\$BUILD_BACKEND" = "true" ]; then
+                                    echo "停止数据库服务（用于重置）..."
+                                    docker-compose ${composeFiles} stop postgres || true
+                                    docker-compose ${composeFiles} rm -f postgres || true
+                                fi
+                                
                                 sleep 3
                                 
                                 # 根据选中的项目决定启动哪些服务
                                 SERVICES_TO_START=""
                                 if [ "\$BUILD_BACKEND" = "true" ]; then
-                                    SERVICES_TO_START="\$SERVICES_TO_START backend"
+                                    SERVICES_TO_START="postgres backend"
                                 fi
                                 if [ "\$BUILD_FRONTEND" = "true" ]; then
                                     SERVICES_TO_START="\$SERVICES_TO_START frontend"
-                                fi
-                                
-                                # 如果选中了后端或前端，还需要启动 postgres（如果后端被选中）
-                                if [ "\$BUILD_BACKEND" = "true" ]; then
-                                    SERVICES_TO_START="postgres\$SERVICES_TO_START"
                                 fi
                                 
                                 # 判断是否需要重新构建
@@ -768,8 +818,8 @@ EOF
                     // 切换到项目目录
                     dir("${PORTFOLIO_PROJECT_DIR}") {
                         script {
-                            // 清理旧容器和镜像（如果启用，只清理 Portfolio）
-                            if (params.CLEAN_BUILD) {
+                            // 清理旧容器和镜像（如果启用，且勾选了 Portfolio）
+                            if (params.CLEAN_BUILD && params.BUILD_PORTFOLIO) {
                                 sh '''
                                     echo "清理旧的 Portfolio 容器和镜像..."
                                     docker-compose -f docker-compose.yml down || true
@@ -779,6 +829,8 @@ EOF
                                     
                                     echo "✓ 清理完成"
                                 '''
+                            } else if (params.CLEAN_BUILD && !params.BUILD_PORTFOLIO) {
+                                echo "CLEAN_BUILD 已启用，但 BUILD_PORTFOLIO 未勾选，跳过 Portfolio 清理"
                             }
                             
                             // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
@@ -915,8 +967,8 @@ EOF
                     // 切换到项目目录
                     dir("${ADMIN_PROJECT_DIR}") {
                         script {
-                            // 清理旧容器和镜像（如果启用，只清理 Admin）
-                            if (params.CLEAN_BUILD) {
+                            // 清理旧容器和镜像（如果启用，且勾选了 Admin）
+                            if (params.CLEAN_BUILD && params.BUILD_ADMIN) {
                                 sh '''
                                     echo "清理旧的 Admin 容器和镜像..."
                                     docker-compose -f docker-compose.yml down || true
@@ -926,6 +978,8 @@ EOF
                                     
                                     echo "✓ 清理完成"
                                 '''
+                            } else if (params.CLEAN_BUILD && !params.BUILD_ADMIN) {
+                                echo "CLEAN_BUILD 已启用，但 BUILD_ADMIN 未勾选，跳过 Admin 清理"
                             }
                             
                             // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
