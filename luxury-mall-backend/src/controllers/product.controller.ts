@@ -106,7 +106,6 @@ export const updateProduct = async (
   try {
     // 支持两种方式：路径参数或请求体中的 id
     const id = req.params.id || req.body.id
-    const updates = req.body as Partial<Product>
     
     if (!id) {
       const error: AppError = new Error('Product ID is required')
@@ -114,8 +113,15 @@ export const updateProduct = async (
       throw error
     }
     
-    // 从 updates 中移除 id（如果存在）
-    const { id: _, ...updateFields } = updates
+    // 从请求体中获取更新字段，排除 id
+    const { id: _, ...updateFields } = req.body as Partial<Product> & { id?: string }
+    
+    // 检查是否有要更新的字段
+    if (Object.keys(updateFields).length === 0) {
+      const error: AppError = new Error('No fields to update')
+      error.statusCode = 400
+      throw error
+    }
     
     const product = await ProductService.updateProduct(id, updateFields)
     
@@ -127,6 +133,7 @@ export const updateProduct = async (
     
     res.json(product)
   } catch (error) {
+    console.error('Update product error:', error)
     next(error)
   }
 }
