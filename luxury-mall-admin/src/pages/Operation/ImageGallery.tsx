@@ -6,8 +6,7 @@ import {
   Card,
   message,
   Image as AntImage,
-  Popconfirm,
-  Tag
+  Popconfirm
 } from 'antd'
 import { DeleteOutlined, ReloadOutlined } from '@ant-design/icons'
 import axios from 'axios'

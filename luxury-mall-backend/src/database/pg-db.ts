@@ -1412,7 +1412,7 @@ export async function deleteImage(id: string): Promise<boolean> {
   try {
     const query = 'DELETE FROM images WHERE id = $1'
     const result = await getPool().query(query, [id])
-    return result.rowCount > 0
+    return (result.rowCount ?? 0) > 0
   } catch (error) {
     console.error('Database deleteImage error:', error)
     throw error
@@ -1696,7 +1696,7 @@ export async function deletePage(id: string): Promise<boolean> {
   try {
     const query = 'DELETE FROM pages WHERE id = $1'
     const result = await getPool().query(query, [id])
-    return result.rowCount > 0
+    return (result.rowCount ?? 0) > 0
   } catch (error) {
     console.error('Database deletePage error:', error)
     throw error
