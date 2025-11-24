@@ -12,7 +12,9 @@
     "migrate-to-db": "node dist/scripts/migrate-to-db.js",
     "normalize-tags": "ts-node src/scripts/normalize-product-tags.ts",
     "init-images-table": "ts-node scripts/init-images-table.ts",
-    "init-database": "ts-node scripts/init-database.ts"
+    "init-database": "ts-node scripts/init-database.ts",
+    "init-database-simple": "ts-node scripts/init-database-simple.ts",
+    "create-images-table-only": "ts-node scripts/create-images-table-only.ts"
   },
   "keywords": [
     "express",

@@ -79,7 +79,7 @@ pipeline {
         )
         booleanParam(
             name: 'RESTART_SERVICES',
-            defaultValue: false,
+            defaultValue: true,
             description: '重启服务（重新读取 .env 文件，适用于配置变更）'
         )
         booleanParam(
@@ -736,6 +736,7 @@ EOF
                                         
                                         # 在容器中执行初始化脚本
                                         # 注意：容器内需要能够访问到 postgres 服务（通过 docker-compose 网络）
+                                        echo "设置环境变量并执行初始化脚本..."
                                         docker-compose ${composeFiles} exec -T backend sh -c "
                                             export DB_HOST=postgres
                                             export DB_PORT=5432
@@ -743,7 +744,11 @@ EOF
                                             export DB_USER=${DB_USER}
                                             export DB_PASSWORD=${DB_PASSWORD}
                                             cd /app
-                                            npm run init-database
+                                            echo '当前工作目录:' \$(pwd)
+                                            echo '检查 schema.sql 文件...'
+                                            ls -lh dist/database/schema.sql 2>/dev/null || ls -lh src/database/schema.sql 2>/dev/null || echo '警告: schema.sql 未找到'
+                                            echo '执行数据库初始化...'
+                                            npm run init-database 2>&1
                                         " || {
                                             echo "⚠ 警告: 数据库初始化脚本执行失败，但继续部署"
                                             echo "可能的原因："
