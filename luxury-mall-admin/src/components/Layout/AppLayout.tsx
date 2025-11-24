@@ -24,14 +24,14 @@ const { Header, Sider, Content } = Layout
 // 一级菜单配置（顶部横向）
 const topMenuItems = [
   {
-    key: 'product',
-    icon: <ShoppingOutlined />,
-    label: '商品中心'
-  },
-  {
     key: 'operation',
     icon: <BarChartOutlined />,
     label: '运营中心'
+  },
+  {
+    key: 'product',
+    icon: <ShoppingOutlined />,
+    label: '商品中心'
   }
 ]
 
@@ -47,18 +47,6 @@ const sideMenuItems: Record<string, any[]> = {
           label: '商品列表'
         }
       ]
-    }
-  ],
-  operation: [
-    {
-      key: 'operation-management',
-      label: '运营管理',
-      children: [
-        {
-          key: '/admin/operation/page',
-          label: '页面管理'
-        }
-      ]
     },
     {
       key: 'material-management',
@@ -71,6 +59,18 @@ const sideMenuItems: Record<string, any[]> = {
         {
           key: '/admin/operation/image/gallery',
           label: '静态资源'
+        }
+      ]
+    }
+  ],
+  operation: [
+    {
+      key: 'operation-management',
+      label: '运营管理',
+      children: [
+        {
+          key: '/admin/operation/page',
+          label: '页面管理'
         }
       ]
     },
@@ -105,8 +105,8 @@ const sideMenuItems: Record<string, any[]> = {
 
 function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
-  const [selectedTopMenu, setSelectedTopMenu] = useState<string>('product')
-  const [openKeys, setOpenKeys] = useState<string[]>(['product-management'])
+  const [selectedTopMenu, setSelectedTopMenu] = useState<string>('operation')
+  const [openKeys, setOpenKeys] = useState<string[]>(['operation-management'])
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -143,6 +143,8 @@ function AppLayout() {
       return ['/admin/operation/page']
     } else if (path.includes('/admin/operation/image/list')) {
       return ['/admin/operation/image/list']
+    } else if (path.includes('/admin/operation/image/gallery')) {
+      return ['/admin/operation/image/gallery']
     } else if (path.includes('/admin/operation/carousel')) {
       return ['/admin/operation/carousel']
     } else if (path.includes('/admin/operation/seckill')) {
@@ -160,16 +162,21 @@ function AppLayout() {
   // 初始化时根据路径设置选中的一级菜单和展开的二级菜单
   useEffect(() => {
     const path = location.pathname
-    if (path.includes('/admin/product')) {
+    if (path.includes('/admin/product') || path.includes('/admin/operation/image')) {
       setSelectedTopMenu('product')
-      setOpenKeys(['product-management'])
+      // 根据路径决定展开哪个二级菜单
+      if (path.includes('/admin/product/list')) {
+        setOpenKeys(['product-management'])
+      } else if (path.includes('/admin/operation/image/list') || path.includes('/admin/operation/image/gallery')) {
+        setOpenKeys(['material-management'])
+      } else {
+        setOpenKeys(['product-management', 'material-management'])
+      }
     } else if (path.includes('/admin/operation')) {
       setSelectedTopMenu('operation')
       // 根据路径决定展开哪个二级菜单
       if (path.includes('/admin/operation/page')) {
         setOpenKeys(['operation-management'])
-      } else if (path.includes('/admin/operation/image/list')) {
-        setOpenKeys(['material-management'])
       } else if (path.includes('/admin/operation/carousel') || 
                  path.includes('/admin/operation/seckill') || 
                  path.includes('/admin/operation/groupbuy') || 
@@ -177,7 +184,7 @@ function AppLayout() {
                  path.includes('/admin/operation/guessYouLike')) {
         setOpenKeys(['data-source-management'])
       } else {
-        setOpenKeys(['operation-management', 'material-management', 'data-source-management'])
+        setOpenKeys(['operation-management', 'data-source-management'])
       }
     }
   }, [location.pathname])
@@ -295,7 +302,7 @@ function AppLayout() {
                 </div>
               }
             />
-            <Route path="/" element={<Navigate to="/admin/product/list" replace />} />
+            <Route path="/" element={<Navigate to="/admin/operation/page" replace />} />
           </Routes>
         </Content>
       </Layout>
