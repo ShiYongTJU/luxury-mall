@@ -7,6 +7,7 @@ export type LastOperationType = 'edit' | 'operate' | 'publish'
 // 页面数据
 export interface Page {
   id: string
+  name: string
   pageType: PageType
   dataSource?: string // JSON字符串，存储页面配置数据
   isPublished: boolean
@@ -33,13 +34,13 @@ export interface PageListResponse {
 
 // 创建页面数据
 export interface CreatePageData {
+  name: string
   pageType: PageType
-  dataSource?: string
 }
 
 // 更新页面数据
 export interface UpdatePageData {
+  name?: string
   pageType?: PageType
-  dataSource?: string
 }
 

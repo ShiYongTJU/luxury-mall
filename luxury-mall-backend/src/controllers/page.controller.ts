@@ -68,6 +68,12 @@ export const createPage = async (
     const pageData = req.body as CreatePageData
     
     // 验证必填字段
+    if (!pageData.name) {
+      const error: AppError = new Error('Page name is required')
+      error.statusCode = 400
+      throw error
+    }
+    
     if (!pageData.pageType) {
       const error: AppError = new Error('Page type is required')
       error.statusCode = 400

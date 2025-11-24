@@ -89,8 +89,27 @@ async function createPagesTable() {
     console.log('正在检查 pages 表...')
 
     // 检查表是否存在
-    if (await tableExists('pages')) {
-      console.log('✓ pages 表已存在，跳过创建')
+    const tableExistsResult = await tableExists('pages')
+    
+    if (tableExistsResult) {
+      console.log('✓ pages 表已存在，检查字段...')
+      
+      // 检查 name 字段是否存在，如果不存在则添加
+      const checkColumn = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'pages' 
+        AND column_name = 'name'
+      `)
+      
+      if (checkColumn.rows.length === 0) {
+        console.log('  正在添加 name 字段...')
+        await pool.query('ALTER TABLE pages ADD COLUMN name VARCHAR(200)')
+        console.log('  ✓ name 字段添加成功')
+      } else {
+        console.log('  ✓ name 字段已存在')
+      }
       
       // 检查索引是否存在，如果不存在则创建
       await createIndexIfNotExists('idx_pages_page_type', 'CREATE INDEX idx_pages_page_type ON pages(page_type)')
@@ -104,6 +123,7 @@ async function createPagesTable() {
     await pool.query(`
       CREATE TABLE pages (
         id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
         page_type VARCHAR(20) NOT NULL,
         data_source TEXT,
         is_published BOOLEAN DEFAULT FALSE,
@@ -127,6 +147,72 @@ async function createPagesTable() {
 }
 
 /**
+ * 创建数据源表（轮播图、秒杀、团购、商品列表、猜你喜欢）
+ */
+async function createDataSourceTables() {
+  const tables = [
+    { name: 'carousel_items', displayName: '轮播图' },
+    { name: 'seckill_items', displayName: '秒杀' },
+    { name: 'groupbuy_items', displayName: '团购' },
+    { name: 'product_list_items', displayName: '商品列表' },
+    { name: 'guess_you_like_items', displayName: '猜你喜欢' }
+  ]
+
+  for (const table of tables) {
+    try {
+      const pool = getPool()
+      console.log(`正在检查 ${table.displayName} 表...`)
+
+      const tableExistsResult = await tableExists(table.name)
+
+      if (tableExistsResult) {
+        console.log(`✓ ${table.displayName} 表已存在，跳过创建`)
+
+        // 检查索引
+        await createIndexIfNotExists(
+          `idx_${table.name}_sort_order`,
+          `CREATE INDEX idx_${table.name}_sort_order ON ${table.name}(sort_order)`
+        )
+        await createIndexIfNotExists(
+          `idx_${table.name}_is_enabled`,
+          `CREATE INDEX idx_${table.name}_is_enabled ON ${table.name}(is_enabled)`
+        )
+        continue
+      }
+
+      // 创建表
+      await pool.query(`
+        CREATE TABLE ${table.name} (
+          id VARCHAR(100) PRIMARY KEY,
+          name VARCHAR(200) NOT NULL,
+          config TEXT,
+          data TEXT NOT NULL,
+          sort_order INTEGER DEFAULT 0,
+          is_enabled BOOLEAN DEFAULT TRUE,
+          create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+      console.log(`✓ ${table.displayName} 表创建成功`)
+
+      // 创建索引
+      await createIndexIfNotExists(
+        `idx_${table.name}_sort_order`,
+        `CREATE INDEX idx_${table.name}_sort_order ON ${table.name}(sort_order)`
+      )
+      await createIndexIfNotExists(
+        `idx_${table.name}_is_enabled`,
+        `CREATE INDEX idx_${table.name}_is_enabled ON ${table.name}(is_enabled)`
+      )
+
+    } catch (error: any) {
+      console.error(`✗ 创建 ${table.displayName} 表失败:`, error.message)
+      throw error
+    }
+  }
+}
+
+/**
  * 检查并创建所有必需的表
  * 
  * 所有新增表或表结构变更都应该在此函数中添加
@@ -146,6 +232,7 @@ async function migrateDatabase() {
     // 执行所有迁移
     // 注意：所有新增表或表结构变更都应该在此处添加对应的函数调用
     await createPagesTable()
+    await createDataSourceTables()
 
     console.log('\n==========================================')
     console.log('数据库迁移完成！')

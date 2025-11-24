@@ -4,6 +4,7 @@ import { Address, Order, OrderItem } from '../types/address'
 import { Product, Category, HomePageData, PageComponent } from '../types/product'
 import { Image } from '../types/image'
 import { Page, PageQueryParams, PageListResponse, CreatePageData, UpdatePageData, LastOperationType } from '../types/page'
+import { DataSourceItem, DataSourceQueryParams, DataSourceListResponse, CreateDataSourceData, UpdateDataSourceData, DataSourceType } from '../types/datasource'
 
 // PostgreSQL 连接池
 let pool: Pool | null = null
@@ -1461,6 +1462,7 @@ export async function queryPages(params: PageQueryParams = {}): Promise<PageList
     
     const pages: Page[] = dataResult.rows.map(row => ({
       id: row.id,
+      name: row.name,
       pageType: row.page_type,
       dataSource: row.data_source,
       isPublished: row.is_published,
@@ -1514,17 +1516,17 @@ export async function createPage(pageData: CreatePageData): Promise<Page> {
     
     const query = `
       INSERT INTO pages (
-        id, page_type, data_source, is_published, create_time
+        id, name, page_type, data_source, is_published, create_time
       ) VALUES (
-        $1, $2, $3, FALSE, CURRENT_TIMESTAMP
+        $1, $2, $3, NULL, FALSE, CURRENT_TIMESTAMP
       )
       RETURNING *
     `
     
     const values = [
       id,
-      pageData.pageType,
-      pageData.dataSource || null
+      pageData.name,
+      pageData.pageType
     ]
     
     const result = await getPool().query(query, values)
@@ -1536,6 +1538,7 @@ export async function createPage(pageData: CreatePageData): Promise<Page> {
     const row = result.rows[0]
     return {
       id: row.id,
+      name: row.name,
       pageType: row.page_type,
       dataSource: row.data_source,
       isPublished: row.is_published,
@@ -1556,14 +1559,14 @@ export async function updatePage(id: string, updates: UpdatePageData, operationT
     const values: any[] = []
     let paramIndex = 1
     
+    if (updates.name !== undefined) {
+      updatesList.push(`name = $${paramIndex++}`)
+      values.push(updates.name)
+    }
+    
     if (updates.pageType !== undefined) {
       updatesList.push(`page_type = $${paramIndex++}`)
       values.push(updates.pageType)
-    }
-    
-    if (updates.dataSource !== undefined) {
-      updatesList.push(`data_source = $${paramIndex++}`)
-      values.push(updates.dataSource)
     }
     
     // 更新最近操作时间和操作类型
@@ -1594,6 +1597,7 @@ export async function updatePage(id: string, updates: UpdatePageData, operationT
     const row = result.rows[0]
     return {
       id: row.id,
+      name: row.name,
       pageType: row.page_type,
       dataSource: row.data_source,
       isPublished: row.is_published,
@@ -1641,6 +1645,7 @@ export async function publishPage(id: string): Promise<Page | null> {
       const row = result.rows[0]
       return {
         id: row.id,
+        name: row.name,
         pageType: row.page_type,
         dataSource: row.data_source,
         isPublished: row.is_published,
@@ -1678,6 +1683,7 @@ export async function operatePage(id: string): Promise<Page | null> {
     const row = result.rows[0]
     return {
       id: row.id,
+      name: row.name,
       pageType: row.page_type,
       dataSource: row.data_source,
       isPublished: row.is_published,
@@ -1699,6 +1705,257 @@ export async function deletePage(id: string): Promise<boolean> {
     return (result.rowCount ?? 0) > 0
   } catch (error) {
     console.error('Database deletePage error:', error)
+    throw error
+  }
+}
+
+// ==================== 数据源相关操作 ====================
+
+// 获取表名
+function getTableName(type: DataSourceType): string {
+  const tableMap: Record<DataSourceType, string> = {
+    carousel: 'carousel_items',
+    seckill: 'seckill_items',
+    groupbuy: 'groupbuy_items',
+    productList: 'product_list_items',
+    guessYouLike: 'guess_you_like_items'
+  }
+  return tableMap[type]
+}
+
+// 查询数据源列表
+export async function queryDataSourceItems(
+  type: DataSourceType,
+  params: DataSourceQueryParams = {}
+): Promise<DataSourceListResponse> {
+  try {
+    const { name, isEnabled, page = 1, pageSize = 10 } = params
+    const tableName = getTableName(type)
+    
+    let whereConditions: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+    
+    if (name) {
+      whereConditions.push(`name LIKE $${paramIndex++}`)
+      values.push(`%${name}%`)
+    }
+    
+    if (isEnabled !== undefined) {
+      whereConditions.push(`is_enabled = $${paramIndex++}`)
+      values.push(isEnabled)
+    }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+    
+    // 查询总数
+    const countQuery = `SELECT COUNT(*) as total FROM ${tableName} ${whereClause}`
+    const countResult = await getPool().query(countQuery, values)
+    const total = parseInt(countResult.rows[0].total, 10)
+    
+    // 查询数据
+    const offset = (page - 1) * pageSize
+    const dataValues = [...values, pageSize, offset]
+    const dataQuery = `
+      SELECT * FROM ${tableName}
+      ${whereClause}
+      ORDER BY sort_order ASC, create_time DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `
+    
+    const dataResult = await getPool().query(dataQuery, dataValues)
+    
+    const items: DataSourceItem[] = dataResult.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      config: row.config,
+      data: row.data,
+      sortOrder: row.sort_order,
+      isEnabled: row.is_enabled,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+    }))
+    
+    return {
+      items,
+      total,
+      page,
+      pageSize
+    }
+  } catch (error) {
+    console.error(`Database queryDataSourceItems error (${type}):`, error)
+    throw error
+  }
+}
+
+// 根据ID获取数据源项
+export async function getDataSourceItemById(
+  type: DataSourceType,
+  id: string
+): Promise<DataSourceItem | null> {
+  try {
+    const tableName = getTableName(type)
+    const query = `SELECT * FROM ${tableName} WHERE id = $1`
+    const result = await getPool().query(query, [id])
+    
+    if (result.rows.length === 0) {
+      return null
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      name: row.name,
+      config: row.config,
+      data: row.data,
+      sortOrder: row.sort_order,
+      isEnabled: row.is_enabled,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+    }
+  } catch (error) {
+    console.error(`Database getDataSourceItemById error (${type}):`, error)
+    throw error
+  }
+}
+
+// 创建数据源项
+export async function createDataSourceItem(
+  type: DataSourceType,
+  itemData: CreateDataSourceData
+): Promise<DataSourceItem> {
+  try {
+    const tableName = getTableName(type)
+    const id = `${type}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    
+    const query = `
+      INSERT INTO ${tableName} (
+        id, name, config, data, sort_order, is_enabled, create_time, update_time
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      )
+      RETURNING *
+    `
+    
+    const values = [
+      id,
+      itemData.name,
+      itemData.config || null,
+      itemData.data,
+      itemData.sortOrder ?? 0,
+      itemData.isEnabled ?? true
+    ]
+    
+    const result = await getPool().query(query, values)
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to create data source item')
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      name: row.name,
+      config: row.config,
+      data: row.data,
+      sortOrder: row.sort_order,
+      isEnabled: row.is_enabled,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+    }
+  } catch (error) {
+    console.error(`Database createDataSourceItem error (${type}):`, error)
+    throw error
+  }
+}
+
+// 更新数据源项
+export async function updateDataSourceItem(
+  type: DataSourceType,
+  id: string,
+  updates: UpdateDataSourceData
+): Promise<DataSourceItem | null> {
+  try {
+    const tableName = getTableName(type)
+    const updatesList: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+    
+    if (updates.name !== undefined) {
+      updatesList.push(`name = $${paramIndex++}`)
+      values.push(updates.name)
+    }
+    
+    if (updates.config !== undefined) {
+      updatesList.push(`config = $${paramIndex++}`)
+      values.push(updates.config)
+    }
+    
+    if (updates.data !== undefined) {
+      updatesList.push(`data = $${paramIndex++}`)
+      values.push(updates.data)
+    }
+    
+    if (updates.sortOrder !== undefined) {
+      updatesList.push(`sort_order = $${paramIndex++}`)
+      values.push(updates.sortOrder)
+    }
+    
+    if (updates.isEnabled !== undefined) {
+      updatesList.push(`is_enabled = $${paramIndex++}`)
+      values.push(updates.isEnabled)
+    }
+    
+    if (updatesList.length === 0) {
+      return await getDataSourceItemById(type, id)
+    }
+    
+    updatesList.push(`update_time = CURRENT_TIMESTAMP`)
+    const idParamIndex = paramIndex
+    values.push(id)
+    
+    const query = `
+      UPDATE ${tableName}
+      SET ${updatesList.join(', ')}
+      WHERE id = $${idParamIndex}
+      RETURNING *
+    `
+    
+    const result = await getPool().query(query, values)
+    
+    if (result.rows.length === 0) {
+      return null
+    }
+    
+    const row = result.rows[0]
+    return {
+      id: row.id,
+      name: row.name,
+      config: row.config,
+      data: row.data,
+      sortOrder: row.sort_order,
+      isEnabled: row.is_enabled,
+      createTime: row.create_time ? new Date(row.create_time).toISOString() : undefined,
+      updateTime: row.update_time ? new Date(row.update_time).toISOString() : undefined
+    }
+  } catch (error) {
+    console.error(`Database updateDataSourceItem error (${type}):`, error)
+    throw error
+  }
+}
+
+// 删除数据源项
+export async function deleteDataSourceItem(
+  type: DataSourceType,
+  id: string
+): Promise<boolean> {
+  try {
+    const tableName = getTableName(type)
+    const query = `DELETE FROM ${tableName} WHERE id = $1`
+    const result = await getPool().query(query, [id])
+    return (result.rowCount ?? 0) > 0
+  } catch (error) {
+    console.error(`Database deleteDataSourceItem error (${type}):`, error)
     throw error
   }
 }

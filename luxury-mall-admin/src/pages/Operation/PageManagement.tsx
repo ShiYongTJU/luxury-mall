@@ -19,8 +19,9 @@ import {
   PlusOutlined,
   DeleteOutlined,
   RocketOutlined,
-  SettingOutlined
+  ToolOutlined
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { pageApi } from '../../api/page'
 import { Page, PageQueryParams, PageType, CreatePageData, UpdatePageData } from '../../types/page'
 import type { ColumnsType } from 'antd/es/table'
@@ -29,6 +30,7 @@ import '../Product/ProductList.css'
 const { Option } = Select
 
 function PageManagement() {
+  const navigate = useNavigate()
   const [form] = Form.useForm()
   const [editForm] = Form.useForm()
   const [loading, setLoading] = useState(false)
@@ -125,8 +127,8 @@ function PageManagement() {
     setIsEditMode(true)
     setEditingPage(page)
     editForm.setFieldsValue({
-      pageType: page.pageType,
-      dataSource: page.dataSource
+      name: page.name,
+      pageType: page.pageType
     })
     setEditModalVisible(true)
   }
@@ -139,16 +141,16 @@ function PageManagement() {
       if (isEditMode && editingPage) {
         // 更新页面
         const updates: UpdatePageData = {
-          pageType: values.pageType,
-          dataSource: values.dataSource
+          name: values.name,
+          pageType: values.pageType
         }
         await pageApi.updatePage(editingPage.id, updates)
         message.success('更新成功')
       } else {
         // 创建页面
         const newPage: CreatePageData = {
-          pageType: values.pageType,
-          dataSource: values.dataSource
+          name: values.name,
+          pageType: values.pageType
         }
         await pageApi.createPage(newPage)
         message.success('创建成功')
@@ -183,15 +185,9 @@ function PageManagement() {
     }
   }
 
-  // 运营
-  const handleOperate = async (page: Page) => {
-    try {
-      await pageApi.operatePage(page.id)
-      message.success('运营操作成功')
-      fetchPages(pagination.current, pagination.pageSize)
-    } catch (error: any) {
-      message.error('运营操作失败：' + (error.message || '未知错误'))
-    }
+  // 装修
+  const handleDesign = (page: Page) => {
+    navigate(`/admin/operation/page/design/${page.id}`)
   }
 
   // 删除
@@ -222,13 +218,6 @@ function PageManagement() {
           {type === 'homepage' ? '首页' : '分类页'}
         </Tag>
       )
-    },
-    {
-      title: '数据源',
-      dataIndex: 'dataSource',
-      key: 'dataSource',
-      ellipsis: true,
-      render: (dataSource: string) => dataSource || '-'
     },
     {
       title: '发布状态',
@@ -264,7 +253,7 @@ function PageManagement() {
         if (!type) return '-'
         const typeMap: Record<string, { text: string; color: string }> = {
           edit: { text: '编辑', color: 'blue' },
-          operate: { text: '运营', color: 'orange' },
+          operate: { text: '装修', color: 'orange' },
           publish: { text: '发布', color: 'success' }
         }
         const config = typeMap[type] || { text: type, color: 'default' }
@@ -287,10 +276,10 @@ function PageManagement() {
           </Button>
           <Button
             type="link"
-            icon={<SettingOutlined />}
-            onClick={() => handleOperate(record)}
+            icon={<ToolOutlined />}
+            onClick={() => handleDesign(record)}
           >
-            运营
+            装修
           </Button>
           <Popconfirm
             title="确定要发布这个页面吗？"
@@ -410,6 +399,13 @@ function PageManagement() {
           style={{ marginTop: 20 }}
         >
           <Form.Item
+            name="name"
+            label="页面名称"
+            rules={[{ required: true, message: '请输入页面名称' }]}
+          >
+            <Input placeholder="请输入页面名称" />
+          </Form.Item>
+          <Form.Item
             name="pageType"
             label="页面类型"
             rules={[{ required: true, message: '请选择页面类型' }]}
@@ -418,16 +414,6 @@ function PageManagement() {
               <Option value="homepage">首页</Option>
               <Option value="category">分类页</Option>
             </Select>
-          </Form.Item>
-          <Form.Item
-            name="dataSource"
-            label="数据源"
-            tooltip="JSON格式的页面配置数据"
-          >
-            <Input.TextArea
-              rows={8}
-              placeholder='请输入JSON格式的数据源，例如：{"components": []}'
-            />
           </Form.Item>
         </Form>
       </Modal>

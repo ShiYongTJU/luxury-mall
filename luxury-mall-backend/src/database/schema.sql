@@ -197,6 +197,7 @@ CREATE INDEX idx_images_upload_time ON images(upload_time);
 -- 页面表
 CREATE TABLE IF NOT EXISTS pages (
     id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL, -- 页面名称
     page_type VARCHAR(20) NOT NULL, -- 页面类型：homepage（首页）/category（分类页）
     data_source TEXT, -- 数据源（JSON格式，存储页面配置数据）
     is_published BOOLEAN DEFAULT FALSE, -- 发布状态
@@ -209,5 +210,78 @@ CREATE INDEX idx_pages_page_type ON pages(page_type);
 CREATE INDEX idx_pages_is_published ON pages(is_published);
 CREATE INDEX idx_pages_create_time ON pages(create_time);
 CREATE INDEX idx_pages_last_operation_time ON pages(last_operation_time);
+
+-- 数据源表（统一结构）
+-- 轮播图表
+CREATE TABLE IF NOT EXISTS carousel_items (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL, -- 名称/标题
+    config TEXT, -- JSON格式配置（如：height, autoplay, interval等）
+    data TEXT NOT NULL, -- JSON格式数据（轮播图项列表）
+    sort_order INTEGER DEFAULT 0, -- 排序
+    is_enabled BOOLEAN DEFAULT TRUE, -- 是否启用
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 秒杀表
+CREATE TABLE IF NOT EXISTS seckill_items (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL, -- 名称/标题
+    config TEXT, -- JSON格式配置（如：title, endTime等）
+    data TEXT NOT NULL, -- JSON格式数据（商品列表）
+    sort_order INTEGER DEFAULT 0, -- 排序
+    is_enabled BOOLEAN DEFAULT TRUE, -- 是否启用
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 团购表
+CREATE TABLE IF NOT EXISTS groupbuy_items (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL, -- 名称/标题
+    config TEXT, -- JSON格式配置（如：title, groupSize等）
+    data TEXT NOT NULL, -- JSON格式数据（商品列表）
+    sort_order INTEGER DEFAULT 0, -- 排序
+    is_enabled BOOLEAN DEFAULT TRUE, -- 是否启用
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 商品列表表
+CREATE TABLE IF NOT EXISTS product_list_items (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL, -- 名称/标题
+    config TEXT, -- JSON格式配置（如：title, category等）
+    data TEXT NOT NULL, -- JSON格式数据（商品列表）
+    sort_order INTEGER DEFAULT 0, -- 排序
+    is_enabled BOOLEAN DEFAULT TRUE, -- 是否启用
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 猜你喜欢表
+CREATE TABLE IF NOT EXISTS guess_you_like_items (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL, -- 名称/标题
+    config TEXT, -- JSON格式配置（如：title, count等）
+    data TEXT NOT NULL, -- JSON格式数据（商品列表）
+    sort_order INTEGER DEFAULT 0, -- 排序
+    is_enabled BOOLEAN DEFAULT TRUE, -- 是否启用
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX idx_carousel_items_sort_order ON carousel_items(sort_order);
+CREATE INDEX idx_carousel_items_is_enabled ON carousel_items(is_enabled);
+CREATE INDEX idx_seckill_items_sort_order ON seckill_items(sort_order);
+CREATE INDEX idx_seckill_items_is_enabled ON seckill_items(is_enabled);
+CREATE INDEX idx_groupbuy_items_sort_order ON groupbuy_items(sort_order);
+CREATE INDEX idx_groupbuy_items_is_enabled ON groupbuy_items(is_enabled);
+CREATE INDEX idx_product_list_items_sort_order ON product_list_items(sort_order);
+CREATE INDEX idx_product_list_items_is_enabled ON product_list_items(is_enabled);
+CREATE INDEX idx_guess_you_like_items_sort_order ON guess_you_like_items(sort_order);
+CREATE INDEX idx_guess_you_like_items_is_enabled ON guess_you_like_items(is_enabled);
 
 

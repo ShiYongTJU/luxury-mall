@@ -82,6 +82,15 @@ export const API_ROUTES = {
     publish: (id: string) => `${API_BASE_URL}/pages/${id}/publish`,
     operate: (id: string) => `${API_BASE_URL}/pages/${id}/operate`,
     delete: (id: string) => `${API_BASE_URL}/pages/${id}`
+  },
+  
+  // 数据源相关
+  datasource: {
+    list: (type: string) => `${API_BASE_URL}/datasource/${type}`,
+    detail: (type: string, id: string) => `${API_BASE_URL}/datasource/${type}/${id}`,
+    create: (type: string) => `${API_BASE_URL}/datasource/${type}`,
+    update: (type: string, id: string) => `${API_BASE_URL}/datasource/${type}/${id}`,
+    delete: (type: string, id: string) => `${API_BASE_URL}/datasource/${type}/${id}`
   }
 } as const
 
