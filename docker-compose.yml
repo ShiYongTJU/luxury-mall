@@ -46,6 +46,7 @@ services:
       - USE_DATABASE=${USE_DATABASE:-false}
     volumes:
       - ./luxury-mall-backend/data:/app/data
+      - ./luxury-mall-backend/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy

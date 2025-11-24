@@ -15,6 +15,8 @@ import { SearchOutlined, ReloadOutlined, EditOutlined, PlusOutlined, DeleteOutli
 import { productApi } from '../../api/product'
 import { Product, ProductQueryParams } from '../../types/product'
 import type { ColumnsType } from 'antd/es/table'
+import ImageSelector from '../../components/ImageSelector/ImageSelector'
+import { getFullImageUrl } from '../../utils/backendUrl'
 import './ProductList.css'
 
 function ProductList() {
@@ -142,6 +144,11 @@ function ProductList() {
   const [complexFieldData, setComplexFieldData] = useState<any[]>([])
   const [editingRowKey, setEditingRowKey] = useState<string | null>(null)
   const [editingOptions, setEditingOptions] = useState<Set<string>>(new Set()) // 正在编辑的 option key 集合（格式：specKey_optionId）
+  
+  // 图片选择器状态
+  const [imageSelectorVisible, setImageSelectorVisible] = useState(false)
+  const [imageSelectorTarget, setImageSelectorTarget] = useState<'mainImage' | 'imageList' | null>(null)
+  const [imageListEditingIndex, setImageListEditingIndex] = useState<number | null>(null) // 编辑图片列表时的索引
 
   // 打开新增对话框
   const handleAdd = () => {
@@ -715,9 +722,29 @@ function ProductList() {
           <Form.Item
             name="image"
             label="商品主图URL"
-            rules={[{ required: true, message: '请输入商品主图URL' }]}
+            rules={[{ required: true, message: '请选择商品主图' }]}
           >
-            <Input placeholder="请输入商品主图URL" />
+            <Space>
+              {editForm.getFieldValue('image') && (
+                <Image
+                  src={getFullImageUrl(editForm.getFieldValue('image'))}
+                  alt="主图预览"
+                  width={80}
+                  height={80}
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
+              )}
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => {
+                  setImageSelectorTarget('mainImage')
+                  setImageSelectorVisible(true)
+                }}
+              >
+                {editForm.getFieldValue('image') ? '更换' : '选择'}
+              </Button>
+            </Space>
           </Form.Item>
 
           <Form.Item
@@ -923,39 +950,59 @@ function ProductList() {
                 pagination={false}
                 columns={[
                   {
+                    title: '预览',
+                    dataIndex: 'value',
+                    key: 'preview',
+                    width: 100,
+                    render: (text: string) => text ? (
+                      <Image
+                        src={getFullImageUrl(text)}
+                        alt="预览"
+                        width={60}
+                        height={60}
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
+                      />
+                    ) : (
+                      <span style={{ color: '#999' }}>暂无图片</span>
+                    )
+                  },
+                  {
                     title: '图片URL',
                     dataIndex: 'value',
                     key: 'value',
-                    render: (text: string, record: any) => 
-                      editingRowKey === record.key ? (
-                        <Input
-                          value={text}
-                          onChange={(e) => handleUpdateRow(record.key, 'value', e.target.value)}
-                          onBlur={() => setEditingRowKey(null)}
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          onClick={() => setEditingRowKey(record.key)}
-                          style={{ cursor: 'pointer', color: '#1890ff' }}
-                        >
-                          {text || '点击编辑'}
-                        </span>
-                      )
+                    ellipsis: true,
+                    render: (text: string) => (
+                      <span style={{ fontSize: 12, color: '#666' }}>
+                        {text || '未设置'}
+                      </span>
+                    )
                   },
                   {
                     title: '操作',
                     key: 'action',
-                    width: 100,
+                    width: 150,
                     render: (_: any, record: any) => (
-                      <Button
-                        type="link"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleDeleteRow(record.key)}
-                      >
-                        删除
-                      </Button>
+                      <Space>
+                        <Button
+                          type="link"
+                          icon={<EditOutlined />}
+                          onClick={() => {
+                            setImageSelectorTarget('imageList')
+                            setImageListEditingIndex(record.key)
+                            setImageSelectorVisible(true)
+                          }}
+                        >
+                          编辑
+                        </Button>
+                        <Button
+                          type="link"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteRow(record.key)}
+                        >
+                          删除
+                        </Button>
+                      </Space>
                     )
                   }
                 ]}
@@ -1464,6 +1511,29 @@ function ProductList() {
           </div>
         )}
       </Modal>
+
+      {/* 图片选择器 */}
+      <ImageSelector
+        open={imageSelectorVisible}
+        onCancel={() => {
+          setImageSelectorVisible(false)
+          setImageSelectorTarget(null)
+          setImageListEditingIndex(null)
+        }}
+        onSelect={(imageUrl: string) => {
+          if (imageSelectorTarget === 'mainImage') {
+            // 设置主图URL
+            editForm.setFieldsValue({ image: imageUrl })
+          } else if (imageSelectorTarget === 'imageList' && imageListEditingIndex !== null) {
+            // 更新图片列表中的某个图片URL
+            handleUpdateRow(imageListEditingIndex, 'value', imageUrl)
+          }
+          setImageSelectorVisible(false)
+          setImageSelectorTarget(null)
+          setImageListEditingIndex(null)
+        }}
+        title={imageSelectorTarget === 'mainImage' ? '选择商品主图' : '选择图片'}
+      />
     </div>
   )
 }

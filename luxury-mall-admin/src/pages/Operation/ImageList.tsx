@@ -20,6 +20,7 @@ import dayjs from 'dayjs'
 import { imageApi } from '../../api/image'
 import { Image, ImageQueryParams } from '../../types/image'
 import type { ColumnsType } from 'antd/es/table'
+import { getFullImageUrl, getImageBaseUrl } from '../../utils/backendUrl'
 import '../Product/ProductList.css'
 
 function ImageList() {
@@ -140,28 +141,172 @@ function ImageList() {
   const [editingImage, setEditingImage] = useState<Image | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editForm] = Form.useForm()
+  
+  // 当 Modal 打开且是编辑模式时，设置表单值
+  useEffect(() => {
+    if (editModalVisible && isEditMode && editingImage) {
+      // 确保在 Modal 完全渲染后再设置值
+      const timer = setTimeout(() => {
+        const formValues = {
+          name: editingImage.name,
+          url: editingImage.url || '',
+          description: editingImage.description || '',
+          category: editingImage.category || '',
+          tags: editingImage.tags || '',
+          width: editingImage.width,
+          height: editingImage.height,
+          size: editingImage.size,
+          format: editingImage.format || ''
+        }
+        editForm.setFieldsValue(formValues)
+        
+        // 如果有URL，设置元数据
+        if (editingImage.url) {
+          const hasMetadata = editingImage.width && editingImage.height
+          if (hasMetadata) {
+            setImageMetadata({
+              width: editingImage.width,
+              height: editingImage.height,
+              size: editingImage.size,
+              format: editingImage.format
+            })
+          }
+          
+          // 如果元数据不完整（缺少 size 或 format），自动获取
+          const needsMetadata = !editingImage.size || !editingImage.format
+          if (needsMetadata) {
+            // 延迟执行，确保表单值已设置
+            setTimeout(() => {
+              handleUrlChange(editingImage.url!)
+            }, 200)
+          }
+        }
+      }, 100) // 给 Modal 一些时间完成渲染
+      
+      return () => clearTimeout(timer)
+    } else if (editModalVisible && !isEditMode) {
+      // 新增模式，清空表单
+      editForm.resetFields()
+      setFileList([])
+      setImageMetadata(null)
+    }
+  }, [editModalVisible, isEditMode, editingImage, editForm])
 
   // 获取图片元数据（宽高、大小、格式）
   const getImageMetadata = (url: string): Promise<{ width: number; height: number; size?: number; format?: string }> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      // 如果是 data URL，可以直接获取大小
+      let fileSize: number | undefined
+      let format: string | undefined
+      
+      if (url.startsWith('data:')) {
+        const base64Data = url.split(',')[1]
+        if (base64Data) {
+          // base64 编码后大小约为原文件的 1.33 倍，所以原文件大小约为编码后的 0.75 倍
+          fileSize = Math.floor(base64Data.length * 0.75)
+        }
+        // 从 data URL 中提取格式
+        const match = url.match(/data:image\/(\w+)/i)
+        if (match) {
+          format = match[1].toLowerCase()
+        }
+      }
+      
+      // 如果是完整URL（http:// 或 https:// 开头），尝试通过 HEAD 请求获取大小和格式
+      let imageUrl = url
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        imageUrl = url
+        // 尝试通过 HEAD 请求获取文件大小和 Content-Type
+        try {
+          const response = await fetch(url, { method: 'HEAD', mode: 'cors' })
+          if (response.ok) {
+            // 获取文件大小
+            const contentLength = response.headers.get('Content-Length')
+            if (contentLength) {
+              fileSize = parseInt(contentLength, 10)
+            }
+            
+            // 从 Content-Type 获取格式
+            const contentType = response.headers.get('Content-Type')
+            if (contentType && contentType.startsWith('image/')) {
+              const match = contentType.match(/image\/(\w+)/i)
+              if (match) {
+                format = match[1].toLowerCase()
+                // 处理 jpeg -> jpg
+                if (format === 'jpeg') {
+                  format = 'jpg'
+                }
+              }
+            }
+          }
+        } catch (error) {
+          // HEAD 请求失败不影响图片加载，继续尝试从 URL 提取格式
+          console.warn('HEAD 请求失败，将尝试从 URL 提取格式:', error)
+        }
+      } else if (url.startsWith('/') && !url.startsWith('//')) {
+        // 相对路径，添加后端基础URL
+        imageUrl = `${getImageBaseUrl()}${url}`
+        // 对于相对路径，也尝试获取元数据
+        try {
+          const response = await fetch(imageUrl, { method: 'HEAD', mode: 'cors' })
+          if (response.ok) {
+            const contentLength = response.headers.get('Content-Length')
+            if (contentLength) {
+              fileSize = parseInt(contentLength, 10)
+            }
+            const contentType = response.headers.get('Content-Type')
+            if (contentType && contentType.startsWith('image/')) {
+              const match = contentType.match(/image\/(\w+)/i)
+              if (match) {
+                format = match[1].toLowerCase()
+                if (format === 'jpeg') {
+                  format = 'jpg'
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('HEAD 请求失败:', error)
+        }
+      }
+      
+      // 如果还没有获取到格式，尝试从 URL 中提取
+      if (!format) {
+        const urlMatch = url.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i)
+        if (urlMatch) {
+          format = urlMatch[1].toLowerCase()
+          if (format === 'jpeg') {
+            format = 'jpg'
+          }
+        }
+      }
+      
       const img = new window.Image()
-      img.crossOrigin = 'anonymous'
+      // 只有非 data URL 才需要设置 crossOrigin
+      if (!url.startsWith('data:')) {
+        img.crossOrigin = 'anonymous'
+      }
+      
+      // 设置超时（10秒）
+      const timeout = setTimeout(() => {
+        reject(new Error('图片加载超时'))
+      }, 10000)
       
       img.onload = () => {
+        clearTimeout(timeout)
         const width = img.naturalWidth
         const height = img.naturalHeight
         
-        // 尝试获取格式（从URL或Content-Type）
-        const format = url.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i)?.[1]?.toLowerCase()
-        
-        resolve({ width, height, format })
+        resolve({ width, height, size: fileSize, format })
       }
       
-      img.onerror = () => {
-        reject(new Error('无法加载图片'))
+      img.onerror = (error) => {
+        clearTimeout(timeout)
+        console.error('图片加载失败:', { originalUrl: url, imageUrl, error })
+        reject(new Error(`无法加载图片: ${url.startsWith('/') ? '相对路径需要完整URL' : '图片URL无效'}`))
       }
       
-      img.src = url
+      img.src = imageUrl
     })
   }
 
@@ -196,7 +341,11 @@ function ImageList() {
   const uploadProps: UploadProps = {
     name: 'file',
     fileList,
+    onChange: (info) => {
+      setFileList(info.fileList)
+    },
     customRequest: async (options) => {
+      console.log('customRequest 被调用', options)
       const { file, onSuccess, onError } = options
       const fileObj = file as File
       
@@ -213,7 +362,7 @@ function ImageList() {
         return
       }
       
-      // 读取文件并转换为 base64 URL，用于预览和获取元数据
+      // 读取文件并转换为 base64
       const reader = new FileReader()
       reader.onload = async (e) => {
         const dataUrl = e.target?.result as string
@@ -229,16 +378,14 @@ function ImageList() {
               format: format
             })
             editForm.setFieldsValue({
-              url: dataUrl,
               width: img.naturalWidth,
               height: img.naturalHeight,
               size: fileObj.size,
               format: format
             })
             
-            // 尝试上传到服务器（可选）
+            // 上传到服务器
             try {
-              // 发送 base64 数据到服务器
               const response = await fetch('/api/upload/image', {
                 method: 'POST',
                 headers: {
@@ -250,37 +397,49 @@ function ImageList() {
               if (response.ok) {
                 const result = await response.json()
                 if (result.url) {
-                  // 如果服务器返回了URL，使用服务器URL
-                  editForm.setFieldsValue({ url: result.url })
-                  handleUrlChange(result.url)
+                  // 后端返回相对路径，加上服务器URL前缀
+                  const fullImageUrl = getFullImageUrl(result.url)
+                  editForm.setFieldsValue({ url: fullImageUrl })
+                  
+                  // 更新元数据中的大小
+                  if (result.size) {
+                    setImageMetadata(prev => ({
+                      ...prev,
+                      size: result.size
+                    }))
+                    editForm.setFieldsValue({ size: result.size })
+                  }
+                  
+                  onSuccess?.(result, fileObj as any)
+                  message.success('图片上传成功')
+                } else {
+                  throw new Error('服务器未返回图片URL')
                 }
-                onSuccess?.(result, fileObj as any)
-                message.success('图片上传成功')
               } else {
-                // 上传失败，但使用本地 base64 URL
-                onSuccess?.({ url: dataUrl }, fileObj as any)
-                message.warning('图片已加载，但服务器上传失败，将使用本地预览')
+                const errorText = await response.text()
+                throw new Error(`上传失败: ${errorText}`)
               }
-            } catch (error) {
-              // 上传失败，但使用本地 base64 URL
-              onSuccess?.({ url: dataUrl }, fileObj as any)
-              message.warning('图片已加载，但服务器上传失败，将使用本地预览')
+            } catch (error: any) {
+              console.error('图片上传失败:', error)
+              onError?.(error as any)
+              message.error('图片上传失败：' + (error.message || '未知错误'))
             }
           }
           img.onerror = () => {
-            onError?.(new Error('无法读取图片') as any)
+            onError?.(new Error('无法读取图片文件') as any)
+            message.error('无法读取图片文件')
           }
           img.src = dataUrl
         }
       }
       reader.onerror = () => {
         onError?.(new Error('读取文件失败') as any)
+        message.error('读取文件失败')
       }
       reader.readAsDataURL(fileObj)
     },
     onRemove: () => {
       setFileList([])
-      editForm.setFieldsValue({ url: '' })
       setImageMetadata(null)
     }
   }
@@ -297,47 +456,15 @@ function ImageList() {
 
   // 打开编辑对话框
   const handleEdit = async (image: Image) => {
+    // 先清空 fileList，避免上传组件干扰
+    setFileList([])
+    setImageMetadata(null)
+    
+    // 设置编辑状态
     setEditingImage(image)
     setIsEditMode(true)
-    editForm.setFieldsValue({
-      name: image.name,
-      url: image.url,
-      description: image.description || '',
-      category: image.category || '',
-      tags: image.tags || '',
-      width: image.width,
-      height: image.height,
-      size: image.size,
-      format: image.format || ''
-    })
     
-    // 如果有URL，尝试获取元数据
-    if (image.url) {
-      const hasMetadata = image.width && image.height
-      if (hasMetadata) {
-        setImageMetadata({
-          width: image.width,
-          height: image.height,
-          size: image.size,
-          format: image.format
-        })
-      } else {
-        // 尝试自动获取
-        try {
-          const metadata = await getImageMetadata(image.url)
-          setImageMetadata(metadata)
-          editForm.setFieldsValue({
-            width: metadata.width,
-            height: metadata.height,
-            format: metadata.format || image.format
-          })
-        } catch (error) {
-          setImageMetadata(null)
-        }
-      }
-    }
-    
-    setFileList([])
+    // 打开 Modal，useEffect 会自动设置表单值
     setEditModalVisible(true)
   }
 
@@ -345,19 +472,38 @@ function ImageList() {
   const handleSave = async () => {
     try {
       const values = await editForm.validateFields()
+      const imageUrl = values.url
+      
+      if (!imageUrl || !imageUrl.trim()) {
+        message.error('图片URL不能为空')
+        return
+      }
+      
+      // 如果URL是相对路径，转换为完整URL
+      const fullImageUrl = imageUrl.startsWith('http://') || imageUrl.startsWith('https://') 
+        ? imageUrl 
+        : getFullImageUrl(imageUrl)
+      
+      // 使用已有的元数据或表单中的值
+      const finalMetadata = {
+        width: imageMetadata?.width || values.width,
+        height: imageMetadata?.height || values.height,
+        size: imageMetadata?.size || values.size,
+        format: imageMetadata?.format || values.format
+      }
       
       if (isEditMode && editingImage) {
         // 编辑模式
         const updates: Partial<Image> = {
           name: values.name,
-          url: values.url,
+          url: fullImageUrl, // 使用完整URL（包含后端域名和端口）
           description: values.description,
           category: values.category,
           tags: values.tags,
-          width: values.width,
-          height: values.height,
-          size: values.size,
-          format: values.format
+          width: finalMetadata.width,
+          height: finalMetadata.height,
+          size: finalMetadata.size,
+          format: finalMetadata.format
         }
 
         await imageApi.updateImage(editingImage.id, updates)
@@ -366,14 +512,14 @@ function ImageList() {
         // 新增模式
         const newImage: Omit<Image, 'id'> & { id?: string } = {
           name: values.name,
-          url: values.url,
+          url: fullImageUrl, // 使用完整URL（包含后端域名和端口）
           description: values.description,
           category: values.category,
           tags: values.tags,
-          width: values.width,
-          height: values.height,
-          size: values.size,
-          format: values.format
+          width: finalMetadata.width,
+          height: finalMetadata.height,
+          size: finalMetadata.size,
+          format: finalMetadata.format
         }
 
         await imageApi.addImage(newImage)
@@ -384,6 +530,8 @@ function ImageList() {
       setEditingImage(null)
       setIsEditMode(false)
       editForm.resetFields()
+      setFileList([])
+      setImageMetadata(null)
       
       // 刷新列表
       fetchImages(undefined, pagination.current, pagination.pageSize)
@@ -628,14 +776,28 @@ function ImageList() {
               <Upload {...uploadProps} maxCount={1}>
                 <Button icon={<UploadOutlined />}>上传图片</Button>
               </Upload>
-              <Input 
-                placeholder="或手动输入图片URL" 
-                onChange={(e) => {
-                  const url = e.target.value
-                  editForm.setFieldsValue({ url })
-                  handleUrlChange(url)
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => prevValues.url !== currentValues.url}
+              >
+                {({ getFieldValue, setFieldValue }) => {
+                  const currentUrl = getFieldValue('url') || ''
+                  return (
+                    <Input 
+                      placeholder="或手动输入图片URL"
+                      value={currentUrl}
+                      onChange={(e) => {
+                        const url = e.target.value
+                        setFieldValue('url', url)
+                        // 只要 URL 变化就触发获取元数据（不判断是否等于 editingImage?.url）
+                        if (url && url.trim()) {
+                          handleUrlChange(url)
+                        }
+                      }}
+                    />
+                  )
                 }}
-              />
+              </Form.Item>
             </Space>
           </Form.Item>
 
@@ -723,4 +885,6 @@ function ImageList() {
 }
 
 export default ImageList
+
+
 
