@@ -50,9 +50,31 @@ const Home = () => {
       ...otherConfig
     } = styleConfig
 
+    // 处理 backgroundColor：确保是字符串格式
+    let bgColor = '#ffffff'
+    if (backgroundColor) {
+      if (typeof backgroundColor === 'string') {
+        bgColor = backgroundColor
+      } else if (typeof backgroundColor === 'object' && backgroundColor !== null) {
+        // 如果是对象格式（ColorPicker 返回的），转换为字符串
+        if (backgroundColor.toHexString) {
+          bgColor = backgroundColor.toHexString()
+        } else if (backgroundColor.metaColor) {
+          // 如果是 metaColor 格式，转换为 hex
+          const meta = backgroundColor.metaColor
+          if (meta.isValid) {
+            const r = Math.round(meta.r).toString(16).padStart(2, '0')
+            const g = Math.round(meta.g).toString(16).padStart(2, '0')
+            const b = Math.round(meta.b).toString(16).padStart(2, '0')
+            bgColor = `#${r}${g}${b}`
+          }
+        }
+      }
+    }
+
     // 构建样式对象
     const componentStyle: React.CSSProperties = {
-      backgroundColor: backgroundColor || '#ffffff',
+      backgroundColor: bgColor,
       padding: padding !== undefined ? `${padding}px` : undefined,
       margin: margin !== undefined ? `${margin}px` : undefined
     }

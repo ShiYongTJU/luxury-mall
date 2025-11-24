@@ -730,9 +730,27 @@ function ComponentConfigPanel({
   useEffect(() => {
     if (selectedComponent) {
       // 初始化表单值
+      // 处理 backgroundColor：确保是字符串格式
+      let bgColor = '#ffffff'
+      if (selectedComponent.config?.backgroundColor) {
+        const bg = selectedComponent.config.backgroundColor
+        if (typeof bg === 'string') {
+          bgColor = bg
+        } else if (typeof bg === 'object' && bg !== null) {
+          // 如果是对象格式，转换为字符串
+          if (bg.metaColor && bg.metaColor.isValid) {
+            const meta = bg.metaColor
+            const r = Math.round(meta.r).toString(16).padStart(2, '0')
+            const g = Math.round(meta.g).toString(16).padStart(2, '0')
+            const b = Math.round(meta.b).toString(16).padStart(2, '0')
+            bgColor = `#${r}${g}${b}`
+          }
+        }
+      }
+      
       form.setFieldsValue({
         title: selectedComponent.config?.title || '',
-        backgroundColor: selectedComponent.config?.backgroundColor || '#ffffff',
+        backgroundColor: bgColor,
         padding: selectedComponent.config?.padding || 0,
         margin: selectedComponent.config?.margin || 0
       })
@@ -771,6 +789,31 @@ function ComponentConfigPanel({
   // 处理样式配置变化
   const handleStyleChange = () => {
     const values = form.getFieldsValue()
+    
+    // 处理 backgroundColor：如果是 ColorPicker 对象，转换为十六进制字符串
+    if (values.backgroundColor) {
+      if (typeof values.backgroundColor === 'object' && values.backgroundColor !== null) {
+        // ColorPicker 返回的对象格式，需要转换为字符串
+        if (values.backgroundColor.toHexString) {
+          values.backgroundColor = values.backgroundColor.toHexString()
+        } else if (values.backgroundColor.metaColor) {
+          // 如果是 metaColor 格式，转换为 hex
+          const meta = values.backgroundColor.metaColor
+          if (meta.isValid) {
+            const r = Math.round(meta.r).toString(16).padStart(2, '0')
+            const g = Math.round(meta.g).toString(16).padStart(2, '0')
+            const b = Math.round(meta.b).toString(16).padStart(2, '0')
+            values.backgroundColor = `#${r}${g}${b}`
+          } else {
+            values.backgroundColor = '#ffffff'
+          }
+        } else {
+          // 其他对象格式，尝试转换为字符串
+          values.backgroundColor = '#ffffff'
+        }
+      }
+    }
+    
     onUpdate({ config: values })
   }
 
