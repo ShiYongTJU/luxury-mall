@@ -31,7 +31,15 @@ app.set('etag', false)
 // CORS 配置
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173']
+  : [
+      'http://localhost:3000', 
+      'http://localhost:5173', 
+      'http://localhost:3002',  // Admin 开发环境
+      'http://127.0.0.1:3000', 
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3002',  // Admin 开发环境
+      'http://1.15.93.186:3002'  // Admin 生产环境
+    ]
 
 // 中间件
 app.use(cors({
@@ -45,16 +53,24 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true)
     } else {
-      // 开发环境允许所有来源（可选，生产环境应移除）
+      // 开发环境允许所有来源
       if (process.env.NODE_ENV === 'development') {
         callback(null, true)
       } else {
-        callback(new Error('Not allowed by CORS'))
+        // 生产环境：检查是否是服务器 IP 的请求（允许同服务器的不同端口）
+        const serverHost = process.env.SERVER_HOST || '1.15.93.186'
+        const originHost = new URL(origin).hostname
+        if (originHost === serverHost || originHost === 'localhost' || originHost === '127.0.0.1') {
+          callback(null, true)
+        } else {
+          console.warn(`CORS blocked origin: ${origin}`)
+          callback(new Error('Not allowed by CORS'))
+        }
       }
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }))
 app.use(express.json())
