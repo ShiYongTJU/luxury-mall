@@ -160,7 +160,7 @@ function PreviewComponentItem({
 // 组件配置面板
 function ComponentConfigPanel({
   selectedComponent,
-  onUpdate
+  onUpdate: _onUpdate // 暂时未使用，配置功能开发中
 }: {
   selectedComponent: PageComponent | null
   onUpdate: (config: any) => void
