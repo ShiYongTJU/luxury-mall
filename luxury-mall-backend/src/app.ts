@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import path from 'path'
 import productRoutes from './routes/product.routes'
 import imageRoutes from './routes/image.routes'
 import searchRoutes from './routes/search.routes'

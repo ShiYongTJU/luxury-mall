@@ -434,7 +434,7 @@ function ProductList() {
   }
 
   // 删除 option
-  const handleDeleteOption = (specKey: string, optionInternalKey: string, optionId?: string) => {
+  const handleDeleteOption = (specKey: string, optionInternalKey: string) => {
     // 如果正在编辑，先移除编辑状态
     const optionKey = `${specKey}_${optionInternalKey}`
     if (editingOptions.has(optionKey)) {
@@ -459,8 +459,7 @@ function ProductList() {
 
   // 更新 option
   // optionInternalKey: 用于定位 option 的稳定 key（_internalKey）
-  // optionId: option 的 id 值（用于更新数据）
-  const handleUpdateOption = (specKey: string, optionInternalKey: string, field: string, value: any, optionId?: string) => {
+  const handleUpdateOption = (specKey: string, optionInternalKey: string, field: string, value: any) => {
     // 使用函数式更新，避免闭包问题，并确保 _internalKey 被保持
     setComplexFieldData(prevData => prevData.map(row => {
       if (row.key === specKey) {
