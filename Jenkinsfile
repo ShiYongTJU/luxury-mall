@@ -13,6 +13,10 @@ pipeline {
         PORTFOLIO_PROJECT_DIR = '/opt/programmer-portfolio'
         PORTFOLIO_DOCKER_COMPOSE_FILE = "${PORTFOLIO_PROJECT_DIR}/docker-compose.yml"
         
+        // Luxury Mall Admin 项目路径
+        ADMIN_PROJECT_DIR = '/opt/luxury-mall-admin'
+        ADMIN_DOCKER_COMPOSE_FILE = "${ADMIN_PROJECT_DIR}/docker-compose.yml"
+        
         // Docker 镜像标签（使用构建号）
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         
@@ -98,6 +102,11 @@ pipeline {
             name: 'BUILD_PORTFOLIO',
             defaultValue: false,
             description: '构建并部署 Programmer Portfolio 项目'
+        )
+        booleanParam(
+            name: 'BUILD_ADMIN',
+            defaultValue: false,
+            description: '构建并部署 Luxury Mall Admin 管理后台项目'
         )
     }
     
@@ -185,6 +194,39 @@ pipeline {
                                     '''
                                 } catch (e) {
                                     echo "⚠ 前端类型检查失败: ${e}"
+                                    echo "继续构建，但请检查类型错误"
+                                    // 不中断构建，仅警告
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                stage('Admin Type Check') {
+                    when {
+                        expression { params.BUILD_ADMIN == true }
+                    }
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 2.3: Admin TypeScript 类型检查"
+                            echo "=========================================="
+                        }
+                        
+                        dir('luxury-mall-admin') {
+                            script {
+                                try {
+                                    sh '''
+                                        echo "安装 Admin 依赖..."
+                                        npm ci
+                                        
+                                        echo "执行 TypeScript 类型检查..."
+                                        npx tsc --noEmit
+                                        
+                                        echo "✓ Admin 类型检查通过"
+                                    '''
+                                } catch (e) {
+                                    echo "⚠ Admin 类型检查失败: ${e}"
                                     echo "继续构建，但请检查类型错误"
                                     // 不中断构建，仅警告
                                 }
@@ -296,6 +338,42 @@ pipeline {
                                     # 验证镜像内的文件时间戳
                                     echo "验证镜像内的文件时间戳:"
                                     docker run --rm programmer-portfolio:latest ls -lth /usr/share/nginx/html | head -5 || true
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build Admin Image') {
+                    when {
+                        expression { params.BUILD_ADMIN == true }
+                    }
+                    steps {
+                        script {
+                            echo "=========================================="
+                            echo "阶段 3.4: 构建 Luxury Mall Admin Docker 镜像"
+                            echo "=========================================="
+                        }
+                        
+                        dir('luxury-mall-admin') {
+                            script {
+                                sh """
+                                    echo "构建 Admin 镜像: luxury-mall-admin:${IMAGE_TAG}"
+                                    echo "构建时间: \$(date '+%Y-%m-%d %H:%M:%S')"
+                                    echo "当前提交: \$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"
+                                    
+                                    # 使用 --no-cache 强制重新构建，确保使用最新代码
+                                    docker build --no-cache -t luxury-mall-admin:${IMAGE_TAG} .
+                                    docker tag luxury-mall-admin:${IMAGE_TAG} luxury-mall-admin:latest
+                                    
+                                    echo "✓ Admin 镜像构建完成"
+                                    echo "镜像信息:"
+                                    docker images luxury-mall-admin:${IMAGE_TAG} --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    docker images luxury-mall-admin:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}"
+                                    
+                                    # 验证镜像内的文件时间戳
+                                    echo "验证镜像内的文件时间戳:"
+                                    docker run --rm luxury-mall-admin:latest ls -lth /usr/share/nginx/html | head -5 || true
                                 """
                             }
                         }
@@ -769,6 +847,153 @@ EOF
             }
         }
         
+        // 阶段 7: 部署 Luxury Mall Admin
+        stage('Deploy Admin') {
+            when {
+                expression { params.BUILD_ADMIN == true }
+            }
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "阶段 7: 部署 Luxury Mall Admin"
+                    echo "=========================================="
+                    echo "部署环境: ${DEPLOY_ENV}"
+                    echo "项目目录: ${ADMIN_PROJECT_DIR}"
+                    echo "Jenkins Workspace: ${env.WORKSPACE}"
+                    
+                    // 从 Jenkins workspace 同步代码到部署目录
+                    script {
+                        sh """
+                            echo "=========================================="
+                            echo "同步 Admin 代码到部署目录..."
+                            echo "源目录: ${env.WORKSPACE}/luxury-mall-admin"
+                            echo "目标目录: ${ADMIN_PROJECT_DIR}"
+                            echo "=========================================="
+                            
+                            # 确保部署目录存在
+                            mkdir -p ${ADMIN_PROJECT_DIR}
+                            
+                            # 使用 rsync 同步文件（排除不需要的文件）
+                            if command -v rsync >/dev/null 2>&1; then
+                                echo "使用 rsync 同步文件..."
+                                rsync -av --delete \\
+                                    --exclude='.git' \\
+                                    --exclude='node_modules' \\
+                                    --exclude='dist' \\
+                                    --exclude='build' \\
+                                    ${env.WORKSPACE}/luxury-mall-admin/ ${ADMIN_PROJECT_DIR}/
+                                echo "✓ 使用 rsync 同步完成"
+                            else
+                                echo "rsync 不可用，使用 cp 命令..."
+                                # 如果 rsync 不可用，使用 cp 命令
+                                # 先清理部署目录
+                                find ${ADMIN_PROJECT_DIR} -mindepth 1 -maxdepth 1 ! -name '.env' ! -name '.env.backup.*' -exec rm -rf {} + 2>/dev/null || true
+                                
+                                # 复制文件
+                                cp -r ${env.WORKSPACE}/luxury-mall-admin/* ${ADMIN_PROJECT_DIR}/ 2>/dev/null || true
+                                cp -r ${env.WORKSPACE}/luxury-mall-admin/.[!.]* ${ADMIN_PROJECT_DIR}/ 2>/dev/null || true
+                                
+                                # 清理不需要的文件
+                                rm -rf ${ADMIN_PROJECT_DIR}/.git 2>/dev/null || true
+                                rm -rf ${ADMIN_PROJECT_DIR}/node_modules 2>/dev/null || true
+                                rm -rf ${ADMIN_PROJECT_DIR}/dist 2>/dev/null || true
+                                
+                                echo "✓ 使用 cp 同步完成"
+                            fi
+                            
+                            # 验证同步结果
+                            echo ""
+                            echo "=========================================="
+                            echo "验证同步结果:"
+                            echo "=========================================="
+                            echo "部署目录内容:"
+                            ls -la ${ADMIN_PROJECT_DIR} | head -10
+                            echo "=========================================="
+                        """
+                    }
+                    
+                    // 切换到项目目录
+                    dir("${ADMIN_PROJECT_DIR}") {
+                        script {
+                            // 清理旧容器和镜像（如果启用，只清理 Admin）
+                            if (params.CLEAN_BUILD) {
+                                sh '''
+                                    echo "清理旧的 Admin 容器和镜像..."
+                                    docker-compose -f docker-compose.yml down || true
+                                    
+                                    # 清理未使用的镜像（保留最近 3 个版本）
+                                    docker image prune -f || true
+                                    
+                                    echo "✓ 清理完成"
+                                '''
+                            }
+                            
+                            // 启动服务（使用 Jenkins 构建的镜像，不重新构建）
+                            sh """
+                                echo "启动 Admin 服务（使用已构建的镜像）..."
+                                echo "Admin 镜像: luxury-mall-admin:latest"
+                                
+                                # 验证镜像是否存在
+                                ADMIN_IMAGE_EXISTS=\$(docker images | grep -c "luxury-mall-admin.*latest" || echo "0")
+                                
+                                if [ "\$ADMIN_IMAGE_EXISTS" -eq "0" ]; then
+                                    echo "⚠ 警告: luxury-mall-admin:latest 镜像不存在，将重新构建"
+                                else
+                                    echo "✓ Admin 镜像存在: luxury-mall-admin:latest"
+                                    echo "Admin 镜像详细信息:"
+                                    docker images luxury-mall-admin:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" || true
+                                fi
+                                
+                                # 停止并删除现有容器（确保使用新镜像）
+                                echo "停止现有容器..."
+                                docker-compose -f docker-compose.yml down || true
+                                sleep 3
+                                
+                                # 如果镜像存在，使用 --no-build 并强制重新创建；否则使用 --build
+                                if [ "\$ADMIN_IMAGE_EXISTS" -gt "0" ]; then
+                                    echo "使用已构建的镜像启动服务（强制重新创建容器）..."
+                                    docker-compose -f docker-compose.yml up -d --no-build --force-recreate
+                                else
+                                    echo "镜像不存在，重新构建镜像..."
+                                    docker-compose -f docker-compose.yml up -d --build --force-recreate
+                                fi
+                                
+                                echo "等待服务启动..."
+                                sleep 10
+                                
+                                echo "检查服务状态..."
+                                docker-compose -f docker-compose.yml ps
+                                
+                                # 验证容器使用的镜像
+                                echo ""
+                                echo "=========================================="
+                                echo "验证容器使用的镜像:"
+                                echo "=========================================="
+                                docker-compose -f docker-compose.yml ps --format "table {{.Name}}\t{{.Image}}\t{{.Status}}" || docker-compose -f docker-compose.yml ps
+                                
+                                # 检查 Admin 容器使用的镜像 ID
+                                echo ""
+                                echo "Admin 容器详细信息:"
+                                ADMIN_CONTAINER_ID=\$(docker-compose -f docker-compose.yml ps -q admin)
+                                if [ -n "\$ADMIN_CONTAINER_ID" ]; then
+                                    echo "容器 ID: \$ADMIN_CONTAINER_ID"
+                                    echo "容器使用的镜像 ID:"
+                                    docker inspect \$ADMIN_CONTAINER_ID --format='{{.Image}}' || true
+                                    echo "latest 标签指向的镜像 ID:"
+                                    docker images luxury-mall-admin:latest --format='{{.ID}}' || true
+                                    echo "容器内文件时间戳:"
+                                    docker exec \$ADMIN_CONTAINER_ID ls -lth /usr/share/nginx/html | head -5 || true
+                                else
+                                    echo "⚠ 警告: Admin 容器未找到"
+                                fi
+                                echo "=========================================="
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        
     }
     
     // 构建后操作
@@ -786,9 +1011,18 @@ EOF
                 echo "部署环境: ${DEPLOY_ENV}"
                 echo ""
                 echo "服务访问地址:"
-                echo "  前端: http://your-server-ip:80"
-                echo "  后端: http://your-server-ip:3001"
-                echo "  Portfolio: http://your-server-ip:666"
+                if (params.BUILD_FRONTEND == true) {
+                    echo "  前端: http://your-server-ip:80"
+                }
+                if (params.BUILD_BACKEND == true) {
+                    echo "  后端: http://your-server-ip:3001"
+                }
+                if (params.BUILD_PORTFOLIO == true) {
+                    echo "  Portfolio: http://your-server-ip:666"
+                }
+                if (params.BUILD_ADMIN == true) {
+                    echo "  Admin: http://your-server-ip:3002"
+                }
                 echo "=========================================="
                 
                 // 发送成功通知（需要配置 Email Extension 插件）

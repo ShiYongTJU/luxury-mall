@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # 管理后台服务
+  admin:
+    image: luxury-mall-admin:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: luxury-mall-admin
+    ports:
+      - "3002:80"
+    restart: unless-stopped
+    networks:
+      - admin-network
+    # 如果需要访问后端服务，可以通过主机网络或外部网络
+    # 注意：如果后端在同一台服务器上，可以通过 host.docker.internal 或主机 IP 访问
+    extra_hosts:
+      - "backend:host-gateway"  # 允许通过主机访问后端
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  admin-network:
+    driver: bridge
+

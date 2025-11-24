@@ -1,0 +1,47 @@
+/* 商品列表样式 */
+.product-list-table .ant-table-tbody > tr > td {
+  padding: 16px 16px;
+}
+
+/* 为表格行添加间距 */
+.product-list-table .ant-table-tbody > tr {
+  margin-bottom: 8px;
+  display: table-row;
+}
+
+/* 使用 border-spacing 或 padding 增加行间距 */
+.product-list-table .ant-table-tbody > tr > td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* 为每行添加底部间距（通过增加单元格的 padding-bottom） */
+.product-list-table .ant-table-tbody > tr:not(:last-child) > td {
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 16px;
+}
+
+/* 增加行高以提供更多视觉间距 */
+.product-list-table .ant-table-tbody > tr {
+  height: auto;
+  min-height: 60px;
+}
+
+/* 筛选表单样式 - 为每个表单项添加上下间距 */
+.product-list-form .ant-form-item {
+  margin-bottom: 16px;
+  margin-top: 8px;
+}
+
+/* 固定 label 宽度，确保对齐 */
+.product-list-form .ant-form-item-label {
+  width: 80px;
+  min-width: 80px;
+  text-align: right;
+}
+
+.product-list-form .ant-form-item-label > label {
+  width: 100%;
+  display: inline-block;
+}
+
