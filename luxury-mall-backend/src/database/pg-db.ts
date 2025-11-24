@@ -1835,6 +1835,193 @@ export async function getDataSourceItemById(
   }
 }
 
+// 获取已发布的首页数据
+export async function getPublishedHomePage(): Promise<{
+  components: Array<{
+    id: string
+    type: string
+    config: any
+    data: any
+  }>
+} | null> {
+  try {
+    // 查询已发布的首页
+    const pageResult = await getPool().query(`
+      SELECT id, data_source
+      FROM pages
+      WHERE page_type = 'homepage' AND is_published = TRUE
+      ORDER BY last_operation_time DESC
+      LIMIT 1
+    `)
+    
+    if (pageResult.rows.length === 0) {
+      return null
+    }
+    
+    const page = pageResult.rows[0]
+    if (!page.data_source) {
+      return { components: [] }
+    }
+    
+    // 解析页面的组件配置
+    let pageComponents: Array<{
+      id: string
+      type: string
+      config?: any
+      dataSource?: string
+      sortOrder?: number
+    }> = []
+    
+    try {
+      const pageData = JSON.parse(page.data_source)
+      if (pageData.components && Array.isArray(pageData.components)) {
+        pageComponents = pageData.components
+      }
+    } catch (e) {
+      console.error('解析页面数据失败:', e)
+      return { components: [] }
+    }
+    
+    // 根据组件配置获取数据源数据
+    const components = await Promise.all(
+      pageComponents.map(async (component) => {
+        const componentToDataSourceType: Record<string, DataSourceType> = {
+          carousel: 'carousel',
+          seckill: 'seckill',
+          groupbuy: 'groupbuy',
+          productList: 'productList',
+          guessYouLike: 'guessYouLike'
+        }
+        
+        const dataSourceType = componentToDataSourceType[component.type]
+        if (!dataSourceType || !component.dataSource) {
+          // 如果没有数据源，返回空数据
+          return {
+            id: component.id,
+            type: component.type,
+            config: component.config || {},
+            data: getDefaultDataForType(component.type)
+          }
+        }
+        
+        // 获取数据源项
+        const dataSourceItem = await getDataSourceItemById(dataSourceType, component.dataSource)
+        if (!dataSourceItem || !dataSourceItem.isEnabled) {
+          return {
+            id: component.id,
+            type: component.type,
+            config: component.config || {},
+            data: getDefaultDataForType(component.type)
+          }
+        }
+        
+        // 解析数据源数据
+        let dataSourceData: any = {}
+        try {
+          dataSourceData = JSON.parse(dataSourceItem.data)
+        } catch (e) {
+          console.error(`解析数据源 ${component.dataSource} 数据失败:`, e)
+          dataSourceData = getDefaultDataForType(component.type)
+        }
+        
+        // 根据组件类型处理数据
+        const processedData = processDataSourceData(component.type, dataSourceData)
+        
+        return {
+          id: component.id,
+          type: component.type,
+          config: component.config || {},
+          data: processedData
+        }
+      })
+    )
+    
+    // 按sortOrder排序
+    components.sort((a, b) => {
+      const aOrder = pageComponents.find(c => c.id === a.id)?.sortOrder || 0
+      const bOrder = pageComponents.find(c => c.id === b.id)?.sortOrder || 0
+      return aOrder - bOrder
+    })
+    
+    return { components }
+  } catch (error) {
+    console.error('Database getPublishedHomePage error:', error)
+    throw error
+  }
+}
+
+// 根据类型获取默认数据
+function getDefaultDataForType(type: string): any {
+  switch (type) {
+    case 'carousel':
+      return []
+    case 'seckill':
+      return { endTime: '', products: [] }
+    case 'groupbuy':
+      return { products: [] }
+    case 'productList':
+      return { products: [] }
+    case 'guessYouLike':
+      return { products: [] }
+    default:
+      return {}
+  }
+}
+
+// 处理数据源数据，转换为前端需要的格式
+function processDataSourceData(type: string, dataSourceData: any): any {
+  switch (type) {
+    case 'carousel':
+      // 轮播图：dataSourceData 应该是 CarouselItemData[]
+      if (Array.isArray(dataSourceData)) {
+        return dataSourceData
+      }
+      // 如果数据源是商品列表，转换为轮播图格式
+      if (dataSourceData.products && Array.isArray(dataSourceData.products)) {
+        return dataSourceData.products.map((product: any) => ({
+          id: product.id,
+          image: product.image,
+          title: product.name,
+          link: `/product/${product.id}`,
+          productId: product.id
+        }))
+      }
+      return []
+    
+    case 'seckill':
+      // 秒杀：dataSourceData 应该是 SeckillData { endTime?, products: Product[] }
+      return {
+        endTime: dataSourceData.endTime || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        products: dataSourceData.products || []
+      }
+    
+    case 'groupbuy':
+      // 团购：dataSourceData 应该是 GroupbuyData { groupSize?, products: Product[] }
+      return {
+        groupSize: dataSourceData.groupSize || 2,
+        products: dataSourceData.products || []
+      }
+    
+    case 'productList':
+      // 商品列表：dataSourceData 应该是 ProductListData { category?, subCategory?, products: Product[] }
+      return {
+        category: dataSourceData.category,
+        subCategory: dataSourceData.subCategory,
+        products: dataSourceData.products || []
+      }
+    
+    case 'guessYouLike':
+      // 猜你喜欢：dataSourceData 应该是 GuessYouLikeData { count?, products: Product[] }
+      return {
+        count: dataSourceData.count || 10,
+        products: dataSourceData.products || []
+      }
+    
+    default:
+      return dataSourceData
+  }
+}
+
 // 创建数据源项
 export async function createDataSourceItem(
   type: DataSourceType,

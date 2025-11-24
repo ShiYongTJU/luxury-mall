@@ -127,6 +127,18 @@ export class ProductService {
 
   // 获取首页数据
   static async getHomePageData(): Promise<HomePageData> {
+    // 如果使用数据库，从pages表查询已发布的首页
+    if (process.env.USE_DATABASE === 'true') {
+      const { getPublishedHomePage } = await import('../database/pg-db')
+      const pageData = await getPublishedHomePage()
+      if (pageData) {
+        return pageData as HomePageData
+      }
+      // 如果没有已发布的首页，返回空数据
+      return { components: [] }
+    }
+    
+    // 否则从 JSON 文件获取（向后兼容）
     await new Promise(resolve => setTimeout(resolve, 200))
     return await Database.getHomePageData()
   }
