@@ -265,9 +265,6 @@ function ProductListManagement() {
       key: 'id',
       width: 200,
       ellipsis: true,
-      render: (id: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{id}</span>
-      )
     },
     {
       title: '名称',
@@ -275,32 +272,6 @@ function ProductListManagement() {
       key: 'name',
       ellipsis: true,
       width: 200
-    },
-    {
-      title: '分类',
-      key: 'category',
-      width: 150,
-      render: (_: any, record: DataSourceItem) => {
-        try {
-          const data = JSON.parse(record.data) as ProductListData
-          return data.category || '-'
-        } catch (e) {
-          return '-'
-        }
-      }
-    },
-    {
-      title: '商品数量',
-      key: 'productCount',
-      width: 100,
-      render: (_: any, record: DataSourceItem) => {
-        try {
-          const data = JSON.parse(record.data) as ProductListData
-          return data.products?.length || 0
-        } catch (e) {
-          return 0
-        }
-      }
     },
     {
       title: '商品列表',
@@ -343,30 +314,6 @@ function ProductListManagement() {
           return '-'
         }
       }
-    },
-    {
-      title: '排序',
-      dataIndex: 'sortOrder',
-      key: 'sortOrder',
-      width: 80
-    },
-    {
-      title: '状态',
-      dataIndex: 'isEnabled',
-      key: 'isEnabled',
-      width: 100,
-      render: (isEnabled: boolean) => (
-        <Tag color={isEnabled ? 'success' : 'default'}>
-          {isEnabled ? '启用' : '禁用'}
-        </Tag>
-      )
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      width: 180,
-      render: (time: string) => time ? new Date(time).toLocaleString('zh-CN') : '-'
     },
     {
       title: '操作',

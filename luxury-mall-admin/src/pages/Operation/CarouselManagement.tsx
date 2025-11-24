@@ -262,10 +262,7 @@ function CarouselManagement() {
       dataIndex: 'id',
       key: 'id',
       width: 200,
-      ellipsis: true,
-      render: (id: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{id}</span>
-      )
+      ellipsis: true
     },
     {
       title: '名称',
@@ -281,6 +278,7 @@ function CarouselManagement() {
       render: (_: any, record: DataSourceItem) => {
         try {
           const data = JSON.parse(record.data) as CarouselItemData[]
+          if (!data || data.length === 0) return '-'
           return (
             <Space>
               {data.slice(0, 3).map((item, index) => (
@@ -300,30 +298,6 @@ function CarouselManagement() {
           return '-'
         }
       }
-    },
-    {
-      title: '排序',
-      dataIndex: 'sortOrder',
-      key: 'sortOrder',
-      width: 80
-    },
-    {
-      title: '状态',
-      dataIndex: 'isEnabled',
-      key: 'isEnabled',
-      width: 100,
-      render: (isEnabled: boolean) => (
-        <Tag color={isEnabled ? 'success' : 'default'}>
-          {isEnabled ? '启用' : '禁用'}
-        </Tag>
-      )
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      width: 180,
-      render: (time: string) => time ? new Date(time).toLocaleString('zh-CN') : '-'
     },
     {
       title: '操作',

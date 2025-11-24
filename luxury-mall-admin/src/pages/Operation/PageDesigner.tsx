@@ -659,34 +659,6 @@ function DataSourceSelector({
       )
     }
 
-    // 添加通用列
-    baseColumns.push(
-      {
-        title: '排序',
-        dataIndex: 'sortOrder',
-        key: 'sortOrder',
-        width: 80
-      },
-      {
-        title: '状态',
-        dataIndex: 'isEnabled',
-        key: 'isEnabled',
-        width: 100,
-        render: (isEnabled: boolean) => (
-          <Tag color={isEnabled ? 'success' : 'default'}>
-            {isEnabled ? '启用' : '禁用'}
-          </Tag>
-        )
-      },
-      {
-        title: '创建时间',
-        dataIndex: 'createTime',
-        key: 'createTime',
-        width: 180,
-        render: (time: string) => time ? new Date(time).toLocaleString('zh-CN') : '-'
-      }
-    )
-
     return baseColumns
   }
 
@@ -947,7 +919,14 @@ function ComponentConfigPanel({
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text strong>已选择：</Text>
-                  <Text>{currentDataSource.name}</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <div>
+                      <Text>{currentDataSource.name}</Text>
+                    </div>
+                    <div style={{ marginTop: 4 }}>
+                      <Text>ID: {currentDataSource.id}</Text>
+                    </div>
+                  </div>
                 </div>
                 <Button
                   type="link"
