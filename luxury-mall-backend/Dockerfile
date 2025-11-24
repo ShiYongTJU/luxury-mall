@@ -50,8 +50,16 @@ RUN mkdir -p dist/database && \
     echo "OK: schema.sql copied to dist/database/" && \
     ls -lh dist/database/schema.sql
 
+# 复制 scripts 目录到 dist（用于数据库初始化脚本）
+RUN mkdir -p dist/scripts && \
+    if [ -d scripts ]; then \
+      cp -r scripts/* dist/scripts/ 2>/dev/null || true; \
+    fi
+
 # 删除 devDependencies 以减小镜像大小
-RUN npm prune --production
+# 但保留 ts-node 和 typescript（用于运行初始化脚本）
+RUN npm prune --production && \
+    npm install --save-dev ts-node typescript @types/node || true
 
 # 验证文件在最终镜像中仍然存在
 RUN ls -lh dist/database/schema.sql || (echo "ERROR: dist/database/schema.sql does not exist in final image" && exit 1)

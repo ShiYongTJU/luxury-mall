@@ -87,6 +87,11 @@ pipeline {
             defaultValue: false,
             description: '重新初始化数据库（会删除所有数据，仅生产环境）'
         )
+        booleanParam(
+            name: 'INIT_DATABASE',
+            defaultValue: false,
+            description: '初始化数据库表结构（创建所有需要的表，不会删除现有数据）'
+        )
         // 项目选择多选框
         booleanParam(
             name: 'BUILD_BACKEND',
@@ -701,6 +706,64 @@ EOF
                                 
                                 echo "检查服务状态..."
                                 docker-compose ${composeFiles} ps
+                                
+                                # 如果启用初始化数据库，创建所有需要的表（不会删除现有数据）
+                                # 注意：这个步骤在服务启动之后执行，确保后端容器已运行
+                                if [ "${params.INIT_DATABASE}" = "true" ] && [ "${params.BUILD_BACKEND}" = "true" ]; then
+                                    echo ""
+                                    echo "=========================================="
+                                    echo "初始化数据库表结构..."
+                                    echo "=========================================="
+                                    
+                                    # 等待数据库就绪
+                                    echo "等待数据库就绪..."
+                                    for i in {1..30}; do
+                                        if docker-compose ${composeFiles} exec -T postgres pg_isready -U postgres >/dev/null 2>&1; then
+                                            echo "✓ 数据库已就绪"
+                                            break
+                                        fi
+                                        echo "等待数据库启动... ($i/30)"
+                                        sleep 2
+                                    done
+                                    
+                                    # 等待后端容器启动
+                                    echo "等待后端容器启动..."
+                                    sleep 5
+                                    
+                                    # 使用后端 Docker 容器执行初始化脚本（推荐方式）
+                                    if docker ps | grep -q "luxury-mall-backend"; then
+                                        echo "使用后端容器执行数据库初始化脚本..."
+                                        
+                                        # 在容器中执行初始化脚本
+                                        # 注意：容器内需要能够访问到 postgres 服务（通过 docker-compose 网络）
+                                        docker-compose ${composeFiles} exec -T backend sh -c "
+                                            export DB_HOST=postgres
+                                            export DB_PORT=5432
+                                            export DB_NAME=${DB_NAME}
+                                            export DB_USER=${DB_USER}
+                                            export DB_PASSWORD=${DB_PASSWORD}
+                                            cd /app
+                                            npm run init-database
+                                        " || {
+                                            echo "⚠ 警告: 数据库初始化脚本执行失败，但继续部署"
+                                            echo "可能的原因："
+                                            echo "  1. 容器内缺少依赖，请检查 Dockerfile 是否包含 scripts 目录"
+                                            echo "  2. 数据库连接失败，请检查环境变量"
+                                            echo "  3. schema.sql 文件不存在"
+                                            echo ""
+                                            echo "请手动执行以下命令初始化数据库："
+                                            echo "  docker-compose ${composeFiles} exec backend npm run init-database"
+                                        }
+                                    else
+                                        echo "⚠ 警告: 后端容器未运行，无法执行初始化脚本"
+                                        echo "请确保后端服务已启动，然后手动执行："
+                                        echo "  docker-compose ${composeFiles} exec backend npm run init-database"
+                                    fi
+                                    
+                                    echo "=========================================="
+                                elif [ "${params.INIT_DATABASE}" = "true" ] && [ "${params.BUILD_BACKEND}" != "true" ]; then
+                                    echo "⚠ 注意: INIT_DATABASE 已启用，但 BUILD_BACKEND 未勾选，跳过数据库初始化"
+                                fi
                                 
                                 # 验证容器使用的镜像
                                 echo ""
