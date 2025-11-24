@@ -18,7 +18,10 @@ import {
   Table,
   Tag,
   Select,
-  Image as AntImage
+  Image as AntImage,
+  Collapse,
+  Row,
+  Col
 } from 'antd'
 import {
   ArrowLeftOutlined,
@@ -71,6 +74,36 @@ const COMPONENT_CONFIGS: Record<ComponentType, { name: string; icon: string; des
   guessYouLike: { name: '猜你喜欢', icon: '❤️', description: '个性化推荐' }
 }
 
+// 组件分类配置
+interface ComponentCategory {
+  key: string
+  label: string
+  types: ComponentType[]
+}
+
+const COMPONENT_CATEGORIES: ComponentCategory[] = [
+  {
+    key: 'marketing',
+    label: '营销活动类',
+    types: ['seckill', 'groupbuy']
+  },
+  {
+    key: 'content',
+    label: '内容展示类',
+    types: ['carousel']
+  },
+  {
+    key: 'product',
+    label: '商品展示类',
+    types: ['productList']
+  },
+  {
+    key: 'recommendation',
+    label: '个性化推荐类',
+    types: ['guessYouLike']
+  }
+]
+
 // 左侧组件列表项
 function ComponentItem({ type }: { type: ComponentType }) {
   const [{ isDragging }, drag] = useDrag({
@@ -84,27 +117,39 @@ function ComponentItem({ type }: { type: ComponentType }) {
   const config = COMPONENT_CONFIGS[type]
 
   return (
-    <div
-      ref={drag}
-      style={{
-        padding: '12px',
-        marginBottom: '8px',
-        border: '1px solid #d9d9d9',
-        borderRadius: '4px',
-        cursor: 'move',
-        opacity: isDragging ? 0.5 : 1,
-        backgroundColor: '#fff',
-        transition: 'all 0.2s'
-      }}
-    >
-      <Space>
-        <span style={{ fontSize: '20px' }}>{config.icon}</span>
-        <div>
-          <div style={{ fontWeight: 500 }}>{config.name}</div>
-          <div style={{ fontSize: '12px', color: '#999' }}>{config.description}</div>
-        </div>
-      </Space>
-    </div>
+    <Col span={12}>
+      <div
+        ref={drag}
+        style={{
+          padding: '12px',
+          border: '1px solid #e8e8e8',
+          borderRadius: '8px',
+          cursor: 'move',
+          opacity: isDragging ? 0.5 : 1,
+          backgroundColor: '#fff',
+          transition: 'all 0.3s ease',
+          height: '100%',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#667eea'
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.15)'
+          e.currentTarget.style.transform = 'translateY(-2px)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#e8e8e8'
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.08)'
+          e.currentTarget.style.transform = 'translateY(0)'
+        }}
+      >
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          <div style={{ fontSize: '20px', textAlign: 'center' }}>{config.icon}</div>
+          <div style={{ fontWeight: 500, textAlign: 'center', fontSize: '13px' }}>{config.name}</div>
+        </Space>
+      </div>
+    </Col>
   )
 }
 
@@ -1062,9 +1107,44 @@ function PageDesignerContent() {
           <div style={{ padding: '16px' }}>
             <Title level={5}>组件库</Title>
             <Divider style={{ margin: '12px 0' }} />
-            {Object.keys(COMPONENT_CONFIGS).map((type) => (
-              <ComponentItem key={type} type={type as ComponentType} />
-            ))}
+            <Collapse
+              defaultActiveKey={COMPONENT_CATEGORIES.map(cat => cat.key)}
+              items={COMPONENT_CATEGORIES.map(category => ({
+                key: category.key,
+                label: <span style={{ fontWeight: 600, fontSize: '14px' }}>{category.label}</span>,
+                children: (
+                  <Row gutter={[8, 8]}>
+                    {category.types.map((type) => (
+                      <ComponentItem key={type} type={type} />
+                    ))}
+                  </Row>
+                )
+              }))}
+              style={{ 
+                background: 'transparent',
+                border: 'none'
+              }}
+              bordered={false}
+              ghost
+              expandIcon={({ isActive }) => (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  background: isActive ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f5f7fa',
+                  transition: 'all 0.3s ease',
+                  color: isActive ? '#fff' : '#8c8c8c',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  boxShadow: isActive ? '0 2px 6px rgba(102, 126, 234, 0.25)' : '0 1px 2px rgba(0, 0, 0, 0.05)'
+                }}>
+                  {isActive ? '−' : '+'}
+                </div>
+              )}
+            />
           </div>
         </Sider>
 
