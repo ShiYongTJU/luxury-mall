@@ -148,7 +148,7 @@ function ProductList() {
   // 图片选择器状态
   const [imageSelectorVisible, setImageSelectorVisible] = useState(false)
   const [imageSelectorTarget, setImageSelectorTarget] = useState<'mainImage' | 'imageList' | null>(null)
-  const [imageListEditingIndex, setImageListEditingIndex] = useState<number | null>(null) // 编辑图片列表时的索引
+  const [imageListEditingIndex, setImageListEditingIndex] = useState<string | null>(null) // 编辑图片列表时的 key
 
   // 打开新增对话框
   const handleAdd = () => {
