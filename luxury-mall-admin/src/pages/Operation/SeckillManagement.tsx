@@ -46,8 +46,7 @@ function SeckillManagement() {
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingItem, setEditingItem] = useState<DataSourceItem | null>(null)
   const [productSelectorVisible, setProductSelectorVisible] = useState(false)
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
-  const [products, setProducts] = useState<Record<string, Product>>({})
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([])
 
   const queryParamsRef = useRef<DataSourceQueryParams>({})
   const isInitializedRef = useRef(false)
@@ -56,26 +55,6 @@ function SeckillManagement() {
   useEffect(() => {
     paginationRef.current = pagination
   }, [pagination])
-
-  // 获取商品信息
-  const fetchProducts = async (productIds: string[]) => {
-    try {
-      const productMap: Record<string, Product> = {}
-      for (const id of productIds) {
-        try {
-          const product = await productApi.getProductById(id)
-          if (product) {
-            productMap[id] = product
-          }
-        } catch (e) {
-          console.warn(`获取商品 ${id} 失败:`, e)
-        }
-      }
-      setProducts(prev => ({ ...prev, ...productMap }))
-    } catch (error) {
-      console.error('获取商品信息失败:', error)
-    }
-  }
 
   // 获取秒杀列表
   const fetchItems = async (page?: number, pageSize?: number) => {
@@ -92,21 +71,7 @@ function SeckillManagement() {
 
       setItems(result.items)
 
-      // 解析所有商品ID并获取商品信息
-      const allProductIds = new Set<string>()
-      result.items.forEach(item => {
-        try {
-          const data = JSON.parse(item.data) as SeckillData
-          if (data.products) {
-            data.products.forEach(id => allProductIds.add(id))
-          }
-        } catch (e) {
-          console.error('解析数据失败:', e)
-        }
-      })
-      if (allProductIds.size > 0) {
-        await fetchProducts(Array.from(allProductIds))
-      }
+      // 注意：不在列表查询时获取商品详情，只在编辑/新增时按需获取
 
       setPagination({
         total: result.total,
@@ -122,17 +87,13 @@ function SeckillManagement() {
     }
   }
 
-  // 初始加载
+  // 初始加载和分页变化
   useEffect(() => {
     if (!isInitializedRef.current) {
       isInitializedRef.current = true
       fetchItems()
-    }
-  }, [])
-
-  // 分页变化
-  useEffect(() => {
-    if (isInitializedRef.current) {
+    } else if (pagination.total > 0) {
+      // 只有在已初始化且已有数据时才响应分页变化
       fetchItems(pagination.current, pagination.pageSize)
     }
   }, [pagination.current, pagination.pageSize])
@@ -160,7 +121,7 @@ function SeckillManagement() {
   const handleAdd = () => {
     setIsEditMode(false)
     setEditingItem(null)
-    setSelectedProductIds([])
+    setSelectedProducts([])
     editForm.resetFields()
     editForm.setFieldsValue({
       isEnabled: true,
@@ -176,12 +137,8 @@ function SeckillManagement() {
     
     try {
       const data = JSON.parse(item.data) as SeckillData
-      setSelectedProductIds(data.products || [])
-      
-      // 获取商品信息
-      if (data.products && data.products.length > 0) {
-        fetchProducts(data.products)
-      }
+      // 从JSON解析完整商品对象数组
+      setSelectedProducts(data.products || [])
       
       const config = item.config ? JSON.parse(item.config) : {}
       editForm.setFieldsValue({
@@ -193,7 +150,7 @@ function SeckillManagement() {
       })
     } catch (e) {
       console.error('解析数据失败:', e)
-      setSelectedProductIds([])
+      setSelectedProducts([])
       editForm.setFieldsValue({
         name: item.name,
         sortOrder: item.sortOrder,
@@ -205,19 +162,41 @@ function SeckillManagement() {
   }
 
   // 从商品选择
-  const handleSelectProducts = (productIds: string[]) => {
-    setSelectedProductIds(prev => {
-      const newIds = [...new Set([...prev, ...productIds])]
-      fetchProducts(newIds)
-      return newIds
-    })
-    setProductSelectorVisible(false)
-    message.success(`已添加 ${productIds.length} 个商品`)
+  // 从商品选择器选择商品，获取完整商品数据并保存
+  const handleSelectProducts = async (productIds: string[]) => {
+    try {
+      // 获取完整商品数据
+      const productMap: Record<string, Product> = {}
+      for (const id of productIds) {
+        try {
+          const product = await productApi.getProductById(id)
+          if (product) {
+            productMap[id] = product
+          }
+        } catch (e) {
+          console.warn(`获取商品 ${id} 失败:`, e)
+        }
+      }
+      
+      // 将新商品添加到已选商品列表（去重）
+      const newProducts = Object.values(productMap)
+      setSelectedProducts(prev => {
+        const existingIds = new Set(prev.map(p => p.id))
+        const uniqueNewProducts = newProducts.filter(p => !existingIds.has(p.id))
+        return [...prev, ...uniqueNewProducts]
+      })
+      
+      setProductSelectorVisible(false)
+      message.success(`已添加 ${newProducts.length} 个商品`)
+    } catch (error) {
+      console.error('获取商品信息失败:', error)
+      message.error('获取商品信息失败')
+    }
   }
 
   // 删除商品
   const handleRemoveProduct = (productId: string) => {
-    setSelectedProductIds(prev => prev.filter(id => id !== productId))
+    setSelectedProducts(prev => prev.filter(p => p.id !== productId))
   }
 
   // 保存
@@ -231,7 +210,7 @@ function SeckillManagement() {
       
       const data: SeckillData = {
         endTime: values.endTime ? values.endTime.toISOString() : undefined,
-        products: selectedProductIds
+        products: selectedProducts // 保存完整商品对象数组
       }
       
       const dataStr = JSON.stringify(data)
@@ -272,7 +251,7 @@ function SeckillManagement() {
     setEditModalVisible(false)
     editForm.resetFields()
     setEditingItem(null)
-    setSelectedProductIds([])
+    setSelectedProducts([])
   }
 
   // 删除
@@ -310,6 +289,48 @@ function SeckillManagement() {
           return data.products?.length || 0
         } catch (e) {
           return 0
+        }
+      }
+    },
+    {
+      title: '商品列表',
+      key: 'products',
+      width: 300,
+      ellipsis: true,
+      render: (_: any, record: DataSourceItem) => {
+        try {
+          const data = JSON.parse(record.data) as SeckillData
+          if (!data.products || data.products.length === 0) {
+            return '-'
+          }
+          return (
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              {data.products.slice(0, 3).map((product: Product) => (
+                <Space key={product.id} size="small">
+                  <AntImage
+                    src={getFullImageUrl(product.image)}
+                    alt={product.name}
+                    width={40}
+                    height={40}
+                    style={{ objectFit: 'cover', borderRadius: 4 }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '12px' }}>{product.name}</div>
+                    <div style={{ fontSize: '11px', color: '#999' }}>
+                      ¥{product.price?.toLocaleString() || '-'}
+                    </div>
+                  </div>
+                </Space>
+              ))}
+              {data.products.length > 3 && (
+                <div style={{ fontSize: '12px', color: '#999' }}>
+                  还有 {data.products.length - 3} 个商品...
+                </div>
+              )}
+            </Space>
+          )
+        } catch (e) {
+          return '-'
         }
       }
     },
@@ -491,40 +512,35 @@ function SeckillManagement() {
                 从商品列表添加
               </Button>
               
-              {selectedProductIds.map(productId => {
-                const product = products[productId]
-                return (
-                  <Card key={productId} size="small" style={{ marginTop: 8 }}>
-                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                      <Space>
-                        {product && (
-                          <AntImage
-                            src={getFullImageUrl(product.image)}
-                            alt={product.name}
-                            width={60}
-                            height={60}
-                            style={{ objectFit: 'cover', borderRadius: 4 }}
-                          />
-                        )}
-                        <div>
-                          <div>{product?.name || productId}</div>
-                          <div style={{ fontSize: '12px', color: '#999' }}>
-                            ¥{product?.price?.toLocaleString() || '-'}
-                          </div>
+              {selectedProducts.map(product => (
+                <Card key={product.id} size="small" style={{ marginTop: 8 }}>
+                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Space>
+                      <AntImage
+                        src={getFullImageUrl(product.image)}
+                        alt={product.name}
+                        width={60}
+                        height={60}
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
+                      />
+                      <div>
+                        <div>{product.name}</div>
+                        <div style={{ fontSize: '12px', color: '#999' }}>
+                          ¥{product.price?.toLocaleString() || '-'}
                         </div>
-                      </Space>
-                      <Button
-                        type="link"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemoveProduct(productId)}
-                      >
-                        删除
-                      </Button>
+                      </div>
                     </Space>
-                  </Card>
-                )
-              })}
+                    <Button
+                      type="link"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleRemoveProduct(product.id)}
+                    >
+                      删除
+                    </Button>
+                  </Space>
+                </Card>
+              ))}
             </Space>
           </Form.Item>
 

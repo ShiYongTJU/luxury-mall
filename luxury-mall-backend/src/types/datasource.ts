@@ -56,28 +56,30 @@ export interface CarouselItemData {
   productId?: string // 如果来自商品，存储商品ID
 }
 
+import { Product } from './product'
+
 // 秒杀数据结构
 export interface SeckillData {
   endTime?: string
-  products: string[] // 商品ID数组
+  products: Product[] // 完整商品对象数组
 }
 
 // 团购数据结构
 export interface GroupbuyData {
   groupSize?: number
-  products: string[] // 商品ID数组
+  products: Product[] // 完整商品对象数组
 }
 
 // 商品列表数据结构
 export interface ProductListData {
   category?: string
   subCategory?: string
-  products: string[] // 商品ID数组
+  products: Product[] // 完整商品对象数组
 }
 
 // 猜你喜欢数据结构
 export interface GuessYouLikeData {
   count?: number
-  products: string[] // 商品ID数组
+  products: Product[] // 完整商品对象数组
 }
 

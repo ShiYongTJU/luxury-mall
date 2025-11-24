@@ -80,17 +80,13 @@ function PageManagement() {
     }
   }
 
-  // 初始加载
+  // 初始加载和分页变化
   useEffect(() => {
     if (!isInitializedRef.current) {
       isInitializedRef.current = true
       fetchPages()
-    }
-  }, [])
-
-  // 分页变化
-  useEffect(() => {
-    if (isInitializedRef.current) {
+    } else if (pagination.total > 0) {
+      // 只有在已初始化且已有数据时才响应分页变化
       fetchPages(pagination.current, pagination.pageSize)
     }
   }, [pagination.current, pagination.pageSize])
