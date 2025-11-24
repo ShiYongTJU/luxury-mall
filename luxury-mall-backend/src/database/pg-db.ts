@@ -20,7 +20,7 @@ export function initDatabase(): Pool {
     password: process.env.DB_PASSWORD || 'postgres',
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000, // 增加连接超时时间到 10 秒
   })
 
   // 测试连接
