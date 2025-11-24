@@ -9,7 +9,6 @@ import {
   message,
   Modal,
   Popconfirm,
-  Tag,
   Image as AntImage
 } from 'antd'
 import {
