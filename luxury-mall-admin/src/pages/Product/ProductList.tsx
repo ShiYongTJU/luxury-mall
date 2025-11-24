@@ -16,8 +16,6 @@ import { Product, ProductQueryParams } from '../../types/product'
 import type { ColumnsType } from 'antd/es/table'
 import './ProductList.css'
 
-const { Option } = Select
-
 function ProductList() {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
@@ -27,9 +25,6 @@ function ProductList() {
     pageSize: 10,
     total: 0
   })
-
-  // 存储所有商品数据（用于前端过滤）
-  const [allProducts, setAllProducts] = useState<Product[]>([])
 
   // 获取商品列表
   const fetchProducts = async (params?: ProductQueryParams) => {
@@ -43,7 +38,6 @@ function ProductList() {
       
       const data = await productApi.getProducts(backendParams)
       const products = Array.isArray(data) ? data : []
-      setAllProducts(products)
       
       // 前端过滤
       let filteredProducts = products
@@ -89,7 +83,6 @@ function ProductList() {
     } catch (error: any) {
       message.error('获取商品列表失败：' + (error.message || '未知错误'))
       setProducts([])
-      setAllProducts([])
     } finally {
       setLoading(false)
     }
