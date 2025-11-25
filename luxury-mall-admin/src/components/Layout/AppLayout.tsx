@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Layout, Menu, theme } from 'antd'
+import { Layout, Menu, theme, Dropdown, Button } from 'antd'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
   AppstoreOutlined,
   ShoppingOutlined,
   BarChartOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import ProductList from '../../pages/Product/ProductList'
 import PageManagement from '../../pages/Operation/PageManagement'
@@ -18,89 +21,132 @@ import SeckillManagement from '../../pages/Operation/SeckillManagement'
 import GroupbuyManagement from '../../pages/Operation/GroupbuyManagement'
 import ProductListManagement from '../../pages/Operation/ProductListManagement'
 import GuessYouLikeManagement from '../../pages/Operation/GuessYouLikeManagement'
+import PermissionManagement from '../../pages/System/PermissionManagement'
+import RoleManagement from '../../pages/System/RoleManagement'
+import UserManagement from '../../pages/System/UserManagement'
+import { hasPermission, adminLogout, getCurrentPermissions } from '../../api/auth'
+import { PermissionWrapper } from '../Permission/PermissionWrapper'
 
 const { Header, Sider, Content } = Layout
 
 // 一级菜单配置（顶部横向）
-const topMenuItems = [
-  {
-    key: 'operation',
-    icon: <BarChartOutlined />,
-    label: '运营中心'
-  },
-  {
-    key: 'product',
-    icon: <ShoppingOutlined />,
-    label: '商品中心'
-  }
-]
-
-// 二级和三级菜单配置（左侧纵向）
-const sideMenuItems: Record<string, any[]> = {
-  product: [
+const getTopMenuItems = () => {
+  const items: any[] = [
     {
-      key: 'product-management',
-      label: '商品管理',
-      children: [
-        {
-          key: '/admin/product/list',
-          label: '商品列表'
-        }
-      ]
+      key: 'operation',
+      icon: <BarChartOutlined />,
+      label: '运营中心'
     },
     {
-      key: 'material-management',
-      label: '素材管理',
-      children: [
-        {
-          key: '/admin/operation/image/list',
-          label: '图片列表'
-        },
-        {
-          key: '/admin/operation/image/gallery',
-          label: '静态资源'
-        }
-      ]
-    }
-  ],
-  operation: [
-    {
-      key: 'operation-management',
-      label: '运营管理',
-      children: [
-        {
-          key: '/admin/operation/page',
-          label: '页面管理'
-        }
-      ]
-    },
-    {
-      key: 'data-source-management',
-      label: '数据源管理',
-      children: [
-        {
-          key: '/admin/operation/carousel',
-          label: '轮播图'
-        },
-        {
-          key: '/admin/operation/seckill',
-          label: '秒杀'
-        },
-        {
-          key: '/admin/operation/groupbuy',
-          label: '团购'
-        },
-        {
-          key: '/admin/operation/productList',
-          label: '商品列表'
-        },
-        {
-          key: '/admin/operation/guessYouLike',
-          label: '猜你喜欢'
-        }
-      ]
+      key: 'product',
+      icon: <ShoppingOutlined />,
+      label: '商品中心'
     }
   ]
+
+  // 根据权限显示系统管理菜单
+  if (hasPermission('menu:system') || hasPermission('admin')) {
+    items.push({
+      key: 'system',
+      icon: <SettingOutlined />,
+      label: '系统管理'
+    })
+  }
+
+  return items
+}
+
+// 二级和三级菜单配置（左侧纵向）
+const getSideMenuItems = (): Record<string, any[]> => {
+  const permissions = getCurrentPermissions()
+  const isAdmin = permissions.includes('admin') || permissions.some(p => p.startsWith('admin'))
+
+  return {
+    product: [
+      {
+        key: 'product-management',
+        label: '商品管理',
+        children: [
+          ...(hasPermission('menu:product:list') || isAdmin ? [{
+            key: '/admin/product/list',
+            label: '商品列表'
+          }] : [])
+        ]
+      },
+      {
+        key: 'material-management',
+        label: '素材管理',
+        children: [
+          ...(hasPermission('menu:product:image:list') || isAdmin ? [{
+            key: '/admin/operation/image/list',
+            label: '图片列表'
+          }] : []),
+          ...(hasPermission('menu:product:image:gallery') || isAdmin ? [{
+            key: '/admin/operation/image/gallery',
+            label: '静态资源'
+          }] : [])
+        ]
+      }
+    ],
+    operation: [
+      {
+        key: 'operation-management',
+        label: '运营管理',
+        children: [
+          ...(hasPermission('menu:operation:page') || isAdmin ? [{
+            key: '/admin/operation/page',
+            label: '页面管理'
+          }] : [])
+        ]
+      },
+      {
+        key: 'data-source-management',
+        label: '数据源管理',
+        children: [
+          ...(hasPermission('menu:operation:carousel') || isAdmin ? [{
+            key: '/admin/operation/carousel',
+            label: '轮播图'
+          }] : []),
+          ...(hasPermission('menu:operation:seckill') || isAdmin ? [{
+            key: '/admin/operation/seckill',
+            label: '秒杀'
+          }] : []),
+          ...(hasPermission('menu:operation:groupbuy') || isAdmin ? [{
+            key: '/admin/operation/groupbuy',
+            label: '团购'
+          }] : []),
+          ...(hasPermission('menu:operation:productList') || isAdmin ? [{
+            key: '/admin/operation/productList',
+            label: '商品列表'
+          }] : []),
+          ...(hasPermission('menu:operation:guessYouLike') || isAdmin ? [{
+            key: '/admin/operation/guessYouLike',
+            label: '猜你喜欢'
+          }] : [])
+        ]
+      }
+    ],
+    system: [
+      {
+        key: 'system-management',
+        label: '系统管理',
+        children: [
+          ...(hasPermission('menu:system:permission') || isAdmin ? [{
+            key: '/admin/system/permission',
+            label: '权限管理'
+          }] : []),
+          ...(hasPermission('menu:system:role') || isAdmin ? [{
+            key: '/admin/system/role',
+            label: '角色管理'
+          }] : []),
+          ...(hasPermission('menu:system:user') || isAdmin ? [{
+            key: '/admin/system/user',
+            label: '用户管理'
+          }] : [])
+        ]
+      }
+    ]
+  }
 }
 
 function AppLayout() {
@@ -112,6 +158,27 @@ function AppLayout() {
   const {
     token: { colorBgContainer }
   } = theme.useToken()
+
+  // 处理退出登录
+  const handleLogout = () => {
+    adminLogout()
+    navigate('/admin/login')
+  }
+
+  // 用户菜单
+  const userMenuItems = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人中心'
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      danger: true
+    }
+  ]
 
   // 处理一级菜单点击
   const handleTopMenuClick = ({ key }: { key: string }) => {
@@ -219,7 +286,7 @@ function AppLayout() {
         <Menu
           mode="horizontal"
           selectedKeys={[selectedTopMenu]}
-          items={topMenuItems}
+          items={getTopMenuItems()}
           onClick={handleTopMenuClick}
           theme="dark"
           style={{
@@ -229,18 +296,38 @@ function AppLayout() {
             background: '#001529'
           }}
         />
-        <div
-          style={{
-            padding: '0 24px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            borderLeft: '1px solid #002140',
-            color: '#fff'
-          }}
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+        <div style={{ display: 'flex', alignItems: 'center', borderLeft: '1px solid #002140' }}>
+          <div
+            style={{
+              padding: '0 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#fff'
+            }}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          </div>
+          <Dropdown
+            menu={{
+              items: userMenuItems,
+              onClick: ({ key }) => {
+                if (key === 'logout') {
+                  handleLogout()
+                }
+              }
+            }}
+            placement="bottomRight"
+          >
+            <Button
+              type="text"
+              icon={<UserOutlined />}
+              style={{ color: '#fff', marginRight: 16 }}
+            >
+              用户
+            </Button>
+          </Dropdown>
         </div>
       </Header>
 
@@ -262,7 +349,7 @@ function AppLayout() {
             selectedKeys={getSelectedKeys()}
             openKeys={openKeys}
             onOpenChange={handleOpenChange}
-            items={sideMenuItems[selectedTopMenu] || []}
+            items={getSideMenuItems()[selectedTopMenu] || []}
             onClick={handleSideMenuClick}
             style={{
               height: '100%',
@@ -293,6 +380,9 @@ function AppLayout() {
             <Route path="/admin/operation/groupbuy" element={<GroupbuyManagement />} />
             <Route path="/admin/operation/productList" element={<ProductListManagement />} />
             <Route path="/admin/operation/guessYouLike" element={<GuessYouLikeManagement />} />
+            <Route path="/admin/system/permission" element={<PermissionManagement />} />
+            <Route path="/admin/system/role" element={<RoleManagement />} />
+            <Route path="/admin/system/user" element={<UserManagement />} />
             <Route
               path="/admin"
               element={

@@ -284,4 +284,127 @@ CREATE INDEX idx_product_list_items_is_enabled ON product_list_items(is_enabled)
 CREATE INDEX idx_guess_you_like_items_sort_order ON guess_you_like_items(sort_order);
 CREATE INDEX idx_guess_you_like_items_is_enabled ON guess_you_like_items(is_enabled);
 
+-- ==========================================
+-- 权限管理系统表结构
+-- ==========================================
+
+-- 后台管理员用户表
+CREATE TABLE IF NOT EXISTS admin_users (
+    id VARCHAR(100) PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    real_name VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'active', -- active, inactive, locked
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login_time TIMESTAMP
+);
+
+CREATE INDEX idx_admin_users_username ON admin_users(username);
+CREATE INDEX idx_admin_users_status ON admin_users(status);
+
+-- 角色表
+CREATE TABLE IF NOT EXISTS roles (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    code VARCHAR(50) NOT NULL UNIQUE, -- 角色代码，如：admin, editor, viewer
+    description TEXT,
+    is_system BOOLEAN DEFAULT FALSE, -- 是否为系统角色（不可删除）
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_roles_code ON roles(code);
+CREATE INDEX idx_roles_is_system ON roles(is_system);
+
+-- 权限表
+CREATE TABLE IF NOT EXISTS permissions (
+    id VARCHAR(100) PRIMARY KEY,
+    code VARCHAR(100) NOT NULL UNIQUE, -- 权限代码，如：menu:operation, button:product:add
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(20) NOT NULL, -- menu, button
+    parent_id VARCHAR(100), -- 父权限ID（用于菜单层级）
+    path VARCHAR(200), -- 菜单路径或按钮标识
+    description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES permissions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_permissions_code ON permissions(code);
+CREATE INDEX idx_permissions_type ON permissions(type);
+CREATE INDEX idx_permissions_parent_id ON permissions(parent_id);
+CREATE INDEX idx_permissions_sort_order ON permissions(sort_order);
+
+-- 用户角色关联表
+CREATE TABLE IF NOT EXISTS user_roles (
+    id VARCHAR(100) PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    role_id VARCHAR(100) NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    UNIQUE(user_id, role_id)
+);
+
+CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
+CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
+
+-- 角色权限关联表
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id VARCHAR(100) PRIMARY KEY,
+    role_id VARCHAR(100) NOT NULL,
+    permission_id VARCHAR(100) NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+    UNIQUE(role_id, permission_id)
+);
+
+CREATE INDEX idx_role_permissions_role_id ON role_permissions(role_id);
+CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_id);
+
+-- 初始化系统管理员角色
+INSERT INTO roles (id, name, code, description, is_system) 
+VALUES ('role_system_admin', '系统管理员', 'admin', '拥有所有权限的系统管理员', TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+-- 初始化默认权限（菜单权限）
+INSERT INTO permissions (id, code, name, type, path, description, sort_order) VALUES
+('perm_menu_operation', 'menu:operation', '运营中心', 'menu', '/admin/operation', '运营中心菜单', 1),
+('perm_menu_product', 'menu:product', '商品中心', 'menu', '/admin/product', '商品中心菜单', 2),
+('perm_menu_operation_page', 'menu:operation:page', '页面管理', 'menu', '/admin/operation/page', '页面管理菜单', 11),
+('perm_menu_operation_carousel', 'menu:operation:carousel', '轮播图', 'menu', '/admin/operation/carousel', '轮播图菜单', 21),
+('perm_menu_operation_seckill', 'menu:operation:seckill', '秒杀', 'menu', '/admin/operation/seckill', '秒杀菜单', 22),
+('perm_menu_operation_groupbuy', 'menu:operation:groupbuy', '团购', 'menu', '/admin/operation/groupbuy', '团购菜单', 23),
+('perm_menu_operation_productList', 'menu:operation:productList', '商品列表', 'menu', '/admin/operation/productList', '商品列表菜单', 24),
+('perm_menu_operation_guessYouLike', 'menu:operation:guessYouLike', '猜你喜欢', 'menu', '/admin/operation/guessYouLike', '猜你喜欢菜单', 25),
+('perm_menu_product_list', 'menu:product:list', '商品列表', 'menu', '/admin/product/list', '商品列表菜单', 31),
+('perm_menu_product_image_list', 'menu:product:image:list', '图片列表', 'menu', '/admin/operation/image/list', '图片列表菜单', 41),
+('perm_menu_product_image_gallery', 'menu:product:image:gallery', '静态资源', 'menu', '/admin/operation/image/gallery', '静态资源菜单', 42)
+ON CONFLICT (id) DO NOTHING;
+
+-- 初始化默认权限（按钮权限示例）
+INSERT INTO permissions (id, code, name, type, parent_id, path, description, sort_order) VALUES
+('perm_btn_product_add', 'button:product:add', '新增商品', 'button', 'perm_menu_product_list', 'product:add', '新增商品按钮', 1),
+('perm_btn_product_edit', 'button:product:edit', '编辑商品', 'button', 'perm_menu_product_list', 'product:edit', '编辑商品按钮', 2),
+('perm_btn_product_delete', 'button:product:delete', '删除商品', 'button', 'perm_menu_product_list', 'product:delete', '删除商品按钮', 3),
+('perm_btn_page_add', 'button:page:add', '新增页面', 'button', 'perm_menu_operation_page', 'page:add', '新增页面按钮', 11),
+('perm_btn_page_edit', 'button:page:edit', '编辑页面', 'button', 'perm_menu_operation_page', 'page:edit', '编辑页面按钮', 12),
+('perm_btn_page_delete', 'button:page:delete', '删除页面', 'button', 'perm_menu_operation_page', 'page:delete', '删除页面按钮', 13),
+('perm_btn_page_publish', 'button:page:publish', '发布页面', 'button', 'perm_menu_operation_page', 'page:publish', '发布页面按钮', 14)
+ON CONFLICT (id) DO NOTHING;
+
+-- 给系统管理员角色分配所有权限
+INSERT INTO role_permissions (id, role_id, permission_id)
+SELECT 
+    'rp_' || role_id || '_' || permission_id,
+    'role_system_admin',
+    id
+FROM permissions
+ON CONFLICT (id) DO NOTHING;
+
 

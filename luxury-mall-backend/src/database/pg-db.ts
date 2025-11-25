@@ -5,6 +5,7 @@ import { Product, Category, HomePageData, PageComponent } from '../types/product
 import { Image } from '../types/image'
 import { Page, PageQueryParams, PageListResponse, CreatePageData, UpdatePageData, LastOperationType } from '../types/page'
 import { DataSourceItem, DataSourceQueryParams, DataSourceListResponse, CreateDataSourceData, UpdateDataSourceData, DataSourceType } from '../types/datasource'
+import { AdminUser, Role, Permission, CreateAdminUserData, UpdateAdminUserData, CreateRoleData, UpdateRoleData, CreatePermissionData, UpdatePermissionData } from '../types/auth'
 
 // PostgreSQL 连接池
 let pool: Pool | null = null
@@ -2166,6 +2167,625 @@ export async function deleteDataSourceItem(
   } catch (error) {
     console.error(`Database deleteDataSourceItem error (${type}):`, error)
     throw error
+  }
+}
+
+// ==========================================
+// 权限管理系统数据库操作
+// ==========================================
+
+// 后台用户相关
+export async function getAdminUserByUsername(username: string, includePassword: boolean = false): Promise<(AdminUser & { password?: string }) | null> {
+  try {
+    const passwordField = includePassword ? ', password' : ''
+    const query = `
+      SELECT 
+        id, username, email, phone, real_name as "realName", status${passwordField},
+        create_time as "createTime", update_time as "updateTime", last_login_time as "lastLoginTime"
+      FROM admin_users
+      WHERE username = $1
+    `
+    const result = await getPool().query(query, [username])
+    return result.rows.length > 0 ? result.rows[0] : null
+  } catch (error) {
+    console.error('Database getAdminUserByUsername error:', error)
+    throw error
+  }
+}
+
+export async function getAdminUserById(id: string): Promise<AdminUser | null> {
+  try {
+    const query = `
+      SELECT 
+        au.id, au.username, au.email, au.phone, au.real_name as "realName", au.status,
+        au.create_time as "createTime", au.update_time as "updateTime", au.last_login_time as "lastLoginTime",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', r.id,
+              'name', r.name,
+              'code', r.code,
+              'description', r.description,
+              'isSystem', r.is_system,
+              'createTime', r.create_time,
+              'updateTime', r.update_time
+            )
+          ) FILTER (WHERE r.id IS NOT NULL),
+          '[]'
+        ) as roles
+      FROM admin_users au
+      LEFT JOIN user_roles ur ON au.id = ur.user_id
+      LEFT JOIN roles r ON ur.role_id = r.id
+      WHERE au.id = $1
+      GROUP BY au.id
+    `
+    const result = await getPool().query(query, [id])
+    if (result.rows.length === 0) return null
+    
+    const row = result.rows[0]
+    return {
+      ...row,
+      roles: row.roles || []
+    }
+  } catch (error) {
+    console.error('Database getAdminUserById error:', error)
+    throw error
+  }
+}
+
+export async function createAdminUser(userData: CreateAdminUserData & { id: string; password: string }): Promise<AdminUser> {
+  try {
+    const client = await getPool().connect()
+    try {
+      await client.query('BEGIN')
+      
+      // 插入用户
+      const insertQuery = `
+        INSERT INTO admin_users (id, username, password, email, phone, real_name, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, username, email, phone, real_name as "realName", status,
+          create_time as "createTime", update_time as "updateTime"
+      `
+      const userResult = await client.query(insertQuery, [
+        userData.id,
+        userData.username,
+        userData.password,
+        userData.email || null,
+        userData.phone || null,
+        userData.realName || null,
+        'active'
+      ])
+      
+      const user = userResult.rows[0]
+      
+      // 分配角色
+      if (userData.roleIds && userData.roleIds.length > 0) {
+        for (const roleId of userData.roleIds) {
+          const roleAssignId = `ur_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          await client.query(
+            'INSERT INTO user_roles (id, user_id, role_id) VALUES ($1, $2, $3)',
+            [roleAssignId, user.id, roleId]
+          )
+        }
+      }
+      
+      await client.query('COMMIT')
+      return user
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  } catch (error) {
+    console.error('Database createAdminUser error:', error)
+    throw error
+  }
+}
+
+export async function updateAdminUser(id: string, updates: UpdateAdminUserData): Promise<AdminUser | null> {
+  try {
+    const client = await getPool().connect()
+    try {
+      await client.query('BEGIN')
+      
+      const updatesList: string[] = []
+      const values: any[] = []
+      let paramIndex = 1
+      
+      if (updates.email !== undefined) {
+        updatesList.push(`email = $${paramIndex++}`)
+        values.push(updates.email || null)
+      }
+      if (updates.phone !== undefined) {
+        updatesList.push(`phone = $${paramIndex++}`)
+        values.push(updates.phone || null)
+      }
+      if (updates.realName !== undefined) {
+        updatesList.push(`real_name = $${paramIndex++}`)
+        values.push(updates.realName || null)
+      }
+      if (updates.status !== undefined) {
+        updatesList.push(`status = $${paramIndex++}`)
+        values.push(updates.status)
+      }
+      
+      if (updatesList.length > 0) {
+        updatesList.push(`update_time = CURRENT_TIMESTAMP`)
+        values.push(id)
+        const query = `
+          UPDATE admin_users
+          SET ${updatesList.join(', ')}
+          WHERE id = $${paramIndex}
+          RETURNING id, username, email, phone, real_name as "realName", status,
+            create_time as "createTime", update_time as "updateTime", last_login_time as "lastLoginTime"
+        `
+        await client.query(query, values)
+      }
+      
+      // 更新角色
+      if (updates.roleIds !== undefined) {
+        // 删除旧角色
+        await client.query('DELETE FROM user_roles WHERE user_id = $1', [id])
+        // 添加新角色
+        if (updates.roleIds.length > 0) {
+          for (const roleId of updates.roleIds) {
+            const roleAssignId = `ur_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            await client.query(
+              'INSERT INTO user_roles (id, user_id, role_id) VALUES ($1, $2, $3)',
+              [roleAssignId, id, roleId]
+            )
+          }
+        }
+      }
+      
+      await client.query('COMMIT')
+      return await getAdminUserById(id)
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  } catch (error) {
+    console.error('Database updateAdminUser error:', error)
+    throw error
+  }
+}
+
+export async function updateAdminUserLastLogin(id: string): Promise<void> {
+  try {
+    await getPool().query(
+      'UPDATE admin_users SET last_login_time = CURRENT_TIMESTAMP WHERE id = $1',
+      [id]
+    )
+  } catch (error) {
+    console.error('Database updateAdminUserLastLogin error:', error)
+    throw error
+  }
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  try {
+    const query = `
+      SELECT 
+        au.id, au.username, au.email, au.phone, au.real_name as "realName", au.status,
+        au.create_time as "createTime", au.update_time as "updateTime", au.last_login_time as "lastLoginTime",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', r.id,
+              'name', r.name,
+              'code', r.code
+            )
+          ) FILTER (WHERE r.id IS NOT NULL),
+          '[]'
+        ) as roles
+      FROM admin_users au
+      LEFT JOIN user_roles ur ON au.id = ur.user_id
+      LEFT JOIN roles r ON ur.role_id = r.id
+      GROUP BY au.id
+      ORDER BY au.create_time DESC
+    `
+    const result = await getPool().query(query)
+    return result.rows.map(row => ({
+      ...row,
+      roles: row.roles || []
+    }))
+  } catch (error) {
+    console.error('Database getAdminUsers error:', error)
+    throw error
+  }
+}
+
+// 角色相关
+export async function getRoles(): Promise<Role[]> {
+  try {
+    const query = `
+      SELECT 
+        id, name, code, description, is_system as "isSystem",
+        create_time as "createTime", update_time as "updateTime"
+      FROM roles
+      ORDER BY create_time DESC
+    `
+    const result = await getPool().query(query)
+    return result.rows
+  } catch (error) {
+    console.error('Database getRoles error:', error)
+    throw error
+  }
+}
+
+export async function getRoleById(id: string): Promise<Role | null> {
+  try {
+    const query = `
+      SELECT 
+        r.id, r.name, r.code, r.description, r.is_system as "isSystem",
+        r.create_time as "createTime", r.update_time as "updateTime",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', p.id,
+              'code', p.code,
+              'name', p.name,
+              'type', p.type,
+              'path', p.path
+            )
+          ) FILTER (WHERE p.id IS NOT NULL),
+          '[]'
+        ) as permissions
+      FROM roles r
+      LEFT JOIN role_permissions rp ON r.id = rp.role_id
+      LEFT JOIN permissions p ON rp.permission_id = p.id
+      WHERE r.id = $1
+      GROUP BY r.id
+    `
+    const result = await getPool().query(query, [id])
+    return result.rows.length > 0 ? {
+      ...result.rows[0],
+      permissions: result.rows[0].permissions || []
+    } : null
+  } catch (error) {
+    console.error('Database getRoleById error:', error)
+    throw error
+  }
+}
+
+export async function getRoleByCode(code: string): Promise<Role | null> {
+  try {
+    const query = `
+      SELECT 
+        id, name, code, description, is_system as "isSystem",
+        create_time as "createTime", update_time as "updateTime"
+      FROM roles
+      WHERE code = $1
+    `
+    const result = await getPool().query(query, [code])
+    return result.rows.length > 0 ? result.rows[0] : null
+  } catch (error) {
+    console.error('Database getRoleByCode error:', error)
+    throw error
+  }
+}
+
+export async function createRole(roleData: CreateRoleData & { id: string }): Promise<Role> {
+  try {
+    const client = await getPool().connect()
+    try {
+      await client.query('BEGIN')
+      
+      // 插入角色
+      const insertQuery = `
+        INSERT INTO roles (id, name, code, description, is_system)
+        VALUES ($1, $2, $3, $4, FALSE)
+        RETURNING id, name, code, description, is_system as "isSystem",
+          create_time as "createTime", update_time as "updateTime"
+      `
+      const roleResult = await client.query(insertQuery, [
+        roleData.id,
+        roleData.name,
+        roleData.code,
+        roleData.description || null
+      ])
+      
+      const role = roleResult.rows[0]
+      
+      // 分配权限
+      if (roleData.permissionIds && roleData.permissionIds.length > 0) {
+        for (const permissionId of roleData.permissionIds) {
+          const rolePermId = `rp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          await client.query(
+            'INSERT INTO role_permissions (id, role_id, permission_id) VALUES ($1, $2, $3)',
+            [rolePermId, role.id, permissionId]
+          )
+        }
+      }
+      
+      await client.query('COMMIT')
+      return role
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  } catch (error) {
+    console.error('Database createRole error:', error)
+    throw error
+  }
+}
+
+export async function updateRole(id: string, updates: UpdateRoleData): Promise<Role | null> {
+  try {
+    const client = await getPool().connect()
+    try {
+      await client.query('BEGIN')
+      
+      const updatesList: string[] = []
+      const values: any[] = []
+      let paramIndex = 1
+      
+      if (updates.name !== undefined) {
+        updatesList.push(`name = $${paramIndex++}`)
+        values.push(updates.name)
+      }
+      if (updates.description !== undefined) {
+        updatesList.push(`description = $${paramIndex++}`)
+        values.push(updates.description || null)
+      }
+      
+      if (updatesList.length > 0) {
+        updatesList.push(`update_time = CURRENT_TIMESTAMP`)
+        values.push(id)
+        const query = `
+          UPDATE roles
+          SET ${updatesList.join(', ')}
+          WHERE id = $${paramIndex} AND is_system = FALSE
+          RETURNING id, name, code, description, is_system as "isSystem",
+            create_time as "createTime", update_time as "updateTime"
+        `
+        await client.query(query, values)
+      }
+      
+      // 更新权限
+      if (updates.permissionIds !== undefined) {
+        // 删除旧权限
+        await client.query('DELETE FROM role_permissions WHERE role_id = $1', [id])
+        // 添加新权限
+        if (updates.permissionIds.length > 0) {
+          for (const permissionId of updates.permissionIds) {
+            const rolePermId = `rp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            await client.query(
+              'INSERT INTO role_permissions (id, role_id, permission_id) VALUES ($1, $2, $3)',
+              [rolePermId, id, permissionId]
+            )
+          }
+        }
+      }
+      
+      await client.query('COMMIT')
+      return await getRoleById(id)
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  } catch (error) {
+    console.error('Database updateRole error:', error)
+    throw error
+  }
+}
+
+export async function deleteRole(id: string): Promise<boolean> {
+  try {
+    const result = await getPool().query(
+      'DELETE FROM roles WHERE id = $1 AND is_system = FALSE',
+      [id]
+    )
+    return (result.rowCount ?? 0) > 0
+  } catch (error) {
+    console.error('Database deleteRole error:', error)
+    throw error
+  }
+}
+
+// 权限相关
+export async function getPermissions(): Promise<Permission[]> {
+  try {
+    const query = `
+      SELECT 
+        id, code, name, type, parent_id as "parentId", path, description,
+        sort_order as "sortOrder",
+        create_time as "createTime", update_time as "updateTime"
+      FROM permissions
+      ORDER BY sort_order ASC, create_time ASC
+    `
+    const result = await getPool().query(query)
+    return result.rows
+  } catch (error) {
+    console.error('Database getPermissions error:', error)
+    throw error
+  }
+}
+
+export async function getPermissionById(id: string): Promise<Permission | null> {
+  try {
+    const query = `
+      SELECT 
+        id, code, name, type, parent_id as "parentId", path, description,
+        sort_order as "sortOrder",
+        create_time as "createTime", update_time as "updateTime"
+      FROM permissions
+      WHERE id = $1
+    `
+    const result = await getPool().query(query, [id])
+    return result.rows.length > 0 ? result.rows[0] : null
+  } catch (error) {
+    console.error('Database getPermissionById error:', error)
+    throw error
+  }
+}
+
+export async function getPermissionByCode(code: string): Promise<Permission | null> {
+  try {
+    const query = `
+      SELECT 
+        id, code, name, type, parent_id as "parentId", path, description,
+        sort_order as "sortOrder",
+        create_time as "createTime", update_time as "updateTime"
+      FROM permissions
+      WHERE code = $1
+    `
+    const result = await getPool().query(query, [code])
+    return result.rows.length > 0 ? result.rows[0] : null
+  } catch (error) {
+    console.error('Database getPermissionByCode error:', error)
+    throw error
+  }
+}
+
+export async function createPermission(permissionData: CreatePermissionData & { id: string }): Promise<Permission> {
+  try {
+    const query = `
+      INSERT INTO permissions (id, code, name, type, parent_id, path, description, sort_order)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, code, name, type, parent_id as "parentId", path, description,
+        sort_order as "sortOrder",
+        create_time as "createTime", update_time as "updateTime"
+    `
+    const result = await getPool().query(query, [
+      permissionData.id,
+      permissionData.code,
+      permissionData.name,
+      permissionData.type,
+      permissionData.parentId || null,
+      permissionData.path || null,
+      permissionData.description || null,
+      permissionData.sortOrder || 0
+    ])
+    return result.rows[0]
+  } catch (error) {
+    console.error('Database createPermission error:', error)
+    throw error
+  }
+}
+
+export async function updatePermission(id: string, updates: UpdatePermissionData): Promise<Permission | null> {
+  try {
+    const updatesList: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+    
+    if (updates.name !== undefined) {
+      updatesList.push(`name = $${paramIndex++}`)
+      values.push(updates.name)
+    }
+    if (updates.path !== undefined) {
+      updatesList.push(`path = $${paramIndex++}`)
+      values.push(updates.path || null)
+    }
+    if (updates.description !== undefined) {
+      updatesList.push(`description = $${paramIndex++}`)
+      values.push(updates.description || null)
+    }
+    if (updates.sortOrder !== undefined) {
+      updatesList.push(`sort_order = $${paramIndex++}`)
+      values.push(updates.sortOrder)
+    }
+    if (updates.parentId !== undefined) {
+      updatesList.push(`parent_id = $${paramIndex++}`)
+      values.push(updates.parentId || null)
+    }
+    
+    if (updatesList.length === 0) {
+      return await getPermissionById(id)
+    }
+    
+    updatesList.push(`update_time = CURRENT_TIMESTAMP`)
+    values.push(id)
+    const query = `
+      UPDATE permissions
+      SET ${updatesList.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, code, name, type, parent_id as "parentId", path, description,
+        sort_order as "sortOrder",
+        create_time as "createTime", update_time as "updateTime"
+    `
+    const result = await getPool().query(query, values)
+    return result.rows.length > 0 ? result.rows[0] : null
+  } catch (error) {
+    console.error('Database updatePermission error:', error)
+    throw error
+  }
+}
+
+export async function deletePermission(id: string): Promise<boolean> {
+  try {
+    const result = await getPool().query('DELETE FROM permissions WHERE id = $1', [id])
+    return (result.rowCount ?? 0) > 0
+  } catch (error) {
+    console.error('Database deletePermission error:', error)
+    throw error
+  }
+}
+
+// 获取用户的所有权限代码
+export async function getUserPermissions(userId: string): Promise<string[]> {
+  try {
+    const query = `
+      SELECT DISTINCT p.code
+      FROM permissions p
+      INNER JOIN role_permissions rp ON p.id = rp.permission_id
+      INNER JOIN roles r ON rp.role_id = r.id
+      INNER JOIN user_roles ur ON r.id = ur.role_id
+      WHERE ur.user_id = $1
+      UNION
+      SELECT p.code
+      FROM permissions p
+      INNER JOIN role_permissions rp ON p.id = rp.permission_id
+      INNER JOIN roles r ON rp.role_id = r.id
+      WHERE r.code = 'admin'
+    `
+    const result = await getPool().query(query, [userId])
+    return result.rows.map(row => row.code)
+  } catch (error) {
+    console.error('Database getUserPermissions error:', error)
+    throw error
+  }
+}
+
+// 检查用户是否有特定权限
+export async function hasPermission(userId: string, permissionCode: string): Promise<boolean> {
+  try {
+    // 系统管理员拥有所有权限
+    const adminCheckQuery = `
+      SELECT 1
+      FROM user_roles ur
+      INNER JOIN roles r ON ur.role_id = r.id
+      WHERE ur.user_id = $1 AND r.code = 'admin'
+      LIMIT 1
+    `
+    const adminResult = await getPool().query(adminCheckQuery, [userId])
+    if (adminResult.rows.length > 0) {
+      return true
+    }
+    
+    // 检查具体权限
+    const query = `
+      SELECT 1
+      FROM permissions p
+      INNER JOIN role_permissions rp ON p.id = rp.permission_id
+      INNER JOIN roles r ON rp.role_id = r.id
+      INNER JOIN user_roles ur ON r.id = ur.role_id
+      WHERE ur.user_id = $1 AND p.code = $2
+      LIMIT 1
+    `
+    const result = await getPool().query(query, [userId, permissionCode])
+    return result.rows.length > 0
+  } catch (error) {
+    console.error('Database hasPermission error:', error)
+    return false
   }
 }
 

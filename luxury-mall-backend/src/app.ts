@@ -12,6 +12,7 @@ import addressRoutes from './routes/address.routes'
 import regionRoutes from './routes/region.routes'
 import userRoutes from './routes/user.routes'
 import homepageRoutes from './routes/homepage.routes'
+import authRoutes from './routes/auth.routes'
 import { updateProduct, addProduct } from './controllers/product.controller'
 import { updateImage, addImage } from './controllers/image.controller'
 import { uploadImage, getUploadedImages, deleteUploadedImage } from './controllers/upload.controller'
@@ -133,6 +134,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/addresses', addressRoutes)
 app.use('/api/regions', regionRoutes)
 app.use('/api/homepage', homepageRoutes)
+app.use('/api', authRoutes)
 
 // 404 处理
 app.use((req, res) => {
