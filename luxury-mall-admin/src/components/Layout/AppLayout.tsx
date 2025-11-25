@@ -153,7 +153,6 @@ function AppLayout() {
   const [selectedTopMenu, setSelectedTopMenu] = useState<string>('operation')
   const [openKeys, setOpenKeys] = useState<string[]>(['operation-management'])
   const [loading, setLoading] = useState(true)
-  const [permissionsLoaded, setPermissionsLoaded] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -167,7 +166,6 @@ function AppLayout() {
         setLoading(true)
         await getCurrentAdminUser()
         // getCurrentAdminUser 会自动更新 localStorage 中的权限
-        setPermissionsLoaded(true)
       } catch (error: any) {
         // 如果获取失败（token 过期等），跳转到登录页
         console.error('获取用户权限失败:', error)
