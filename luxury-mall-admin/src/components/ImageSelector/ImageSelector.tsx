@@ -203,7 +203,7 @@ function ImageSelector({ open, onCancel, onSelect, title = '选择图片' }: Ima
           icon={<PlusOutlined />}
           onClick={() => handleSelectImage(record)}
         >
-          添加
+          选择
         </Button>
       )
     }
@@ -232,21 +232,21 @@ function ImageSelector({ open, onCancel, onSelect, title = '选择图片' }: Ima
           <Form.Item name="format" label="格式">
             <Input placeholder="jpg/png/gif" style={{ width: 100 }} />
           </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                onClick={handleSearch}
-              >
-                查询
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                重置
-              </Button>
-            </Space>
-          </Form.Item>
         </Space>
+        <div style={{ marginTop: 16, textAlign: 'center' }}>
+          <Space>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+            >
+              查询
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+          </Space>
+        </div>
       </Form>
 
       <Table

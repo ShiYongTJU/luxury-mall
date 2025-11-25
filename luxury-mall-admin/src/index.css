@@ -99,9 +99,9 @@ body {
 }
 
 .ant-btn-default:focus {
-  border-color: #667eea;
-  color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+  border-color: var(--success-color);
+  color: var(--success-color);
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.15);
 }
 
 /* 覆盖 Ant Design 默认按钮的蓝色悬停背景 - 改为紫色渐变 */
@@ -234,23 +234,35 @@ button.ant-btn-default:not(:disabled):hover {
   background: rgba(255, 77, 79, 0.08);
 }
 
-/* 全局输入框样式优化 - 与登录页面风格一致 */
+/* 全局输入框样式优化 - 统一使用绿色聚焦边框 */
 .ant-input,
 .ant-input-password,
 .ant-select-selector,
 .ant-picker,
-.ant-input-number {
+.ant-input-number,
+.ant-textarea {
   border-radius: var(--border-radius);
   transition: var(--transition);
   border-color: var(--border-color);
+}
+
+.ant-textarea:hover {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
+}
+
+.ant-textarea:focus {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
+  outline: none;
 }
 
 .ant-input:hover,
 .ant-input-password:hover,
 .ant-select:hover .ant-select-selector,
 .ant-picker:hover {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
 }
 
 .ant-input:focus,
@@ -258,25 +270,25 @@ button.ant-btn-default:not(:disabled):hover {
 .ant-select-focused .ant-select-selector,
 .ant-picker-focused,
 .ant-input-number-focused {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
   outline: none;
 }
 
 /* 输入框前缀图标样式 */
 .ant-input-affix-wrapper:hover {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
 }
 
 .ant-input-affix-wrapper-focused {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
 }
 
 .ant-input-affix-wrapper .ant-input-prefix,
 .ant-input-affix-wrapper .ant-input-suffix {
-  color: var(--primary-color);
+  color: var(--success-color);
 }
 
 /* 文本域样式优化 */
@@ -303,16 +315,16 @@ button.ant-btn-default:not(:disabled):hover {
 }
 
 .ant-select-item:hover {
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(82, 196, 26, 0.1);
 }
 
 .ant-select-item-option-selected {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(82, 196, 26, 0.15) 0%, rgba(82, 196, 26, 0.1) 100%);
   font-weight: 500;
 }
 
 .ant-select-item-option-active {
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(82, 196, 26, 0.1);
 }
 
 /* 全局表单样式优化 */
@@ -322,7 +334,7 @@ button.ant-btn-default:not(:disabled):hover {
 }
 
 .ant-form-item-label > label.ant-form-item-required::before {
-  color: var(--primary-color);
+  color: var(--success-color);
 }
 
 /* 表单验证错误样式 */
@@ -370,8 +382,8 @@ button.ant-btn-default:not(:disabled):hover {
 
 .ant-checkbox-checked .ant-checkbox-inner,
 .ant-radio-checked .ant-radio-inner {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
+  background-color: var(--success-color);
+  border-color: var(--success-color);
 }
 
 .ant-checkbox-checked .ant-checkbox-inner::after,
@@ -381,7 +393,13 @@ button.ant-btn-default:not(:disabled):hover {
 
 .ant-checkbox-wrapper:hover .ant-checkbox-inner,
 .ant-radio-wrapper:hover .ant-radio-inner {
-  border-color: var(--primary-color);
+  border-color: var(--success-color);
+}
+
+.ant-checkbox:focus .ant-checkbox-inner,
+.ant-radio:focus .ant-radio-inner {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
 }
 
 /* 开关样式优化 */
@@ -390,7 +408,7 @@ button.ant-btn-default:not(:disabled):hover {
 }
 
 .ant-switch:focus {
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
 }
 
 /* 上传组件样式优化 */
@@ -399,27 +417,33 @@ button.ant-btn-default:not(:disabled):hover {
 }
 
 .ant-upload:hover {
-  border-color: var(--primary-color);
+  border-color: var(--success-color);
 }
 
 .ant-upload.ant-upload-drag:hover {
-  border-color: var(--primary-color);
-  background: rgba(102, 126, 234, 0.05);
+  border-color: var(--success-color);
+  background: rgba(82, 196, 26, 0.05);
+}
+
+.ant-upload:focus,
+.ant-upload:focus-within {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
 }
 
 /* 日期选择器样式优化 */
 .ant-picker:hover {
-  border-color: var(--primary-color);
+  border-color: var(--success-color);
 }
 
 .ant-picker-focused {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
 }
 
 .ant-picker-cell-selected .ant-picker-cell-inner {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-  border-color: var(--primary-color);
+  background: linear-gradient(135deg, rgba(82, 196, 26, 0.2) 0%, rgba(82, 196, 26, 0.15) 100%);
+  border-color: var(--success-color);
 }
 
 .ant-picker-cell:hover .ant-picker-cell-inner {
@@ -553,8 +577,8 @@ button.ant-btn-default:not(:disabled):hover {
 .ant-pagination-prev:focus,
 .ant-pagination-next:focus,
 .ant-pagination-item:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.15);
 }
 
 /* 标签页样式优化 */
@@ -636,8 +660,44 @@ button.ant-btn-default:not(:disabled):hover {
 }
 
 .ant-slider-handle:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 4px rgba(82, 196, 26, 0.2);
+}
+
+/* 全局覆盖：确保所有 Ant Design 组件的聚焦边框为绿色 */
+.ant-input-number:focus,
+.ant-input-number-focused,
+.ant-input-number:hover {
+  border-color: var(--success-color) !important;
+}
+
+.ant-input-number:focus,
+.ant-input-number-focused {
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15) !important;
+}
+
+/* 覆盖 Ant Design 默认的蓝色聚焦边框 - 强制所有输入类组件使用绿色 */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-password:focus,
+.ant-input-password-focused,
+.ant-select:focus .ant-select-selector,
+.ant-select-focused .ant-select-selector,
+.ant-picker:focus,
+.ant-picker-focused,
+.ant-input-number:focus,
+.ant-input-number-focused,
+.ant-textarea:focus,
+.ant-textarea-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+  border-color: var(--success-color) !important;
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15) !important;
+}
+
+/* 覆盖 Ant Design 默认的蓝色聚焦边框 */
+*:focus-visible {
+  outline-color: var(--success-color);
 }
 
 /* 响应式设计 */
