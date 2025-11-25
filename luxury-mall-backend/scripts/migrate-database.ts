@@ -213,6 +213,212 @@ async function createDataSourceTables() {
 }
 
 /**
+ * 创建权限管理系统表
+ */
+async function createAuthTables() {
+  try {
+    const pool = getPool()
+    console.log('正在检查权限管理系统表...')
+
+    // 1. 创建 admin_users 表
+    if (!(await tableExists('admin_users'))) {
+      await pool.query(`
+        CREATE TABLE admin_users (
+          id VARCHAR(100) PRIMARY KEY,
+          username VARCHAR(50) NOT NULL UNIQUE,
+          password VARCHAR(255) NOT NULL,
+          email VARCHAR(100),
+          phone VARCHAR(20),
+          real_name VARCHAR(50),
+          status VARCHAR(20) DEFAULT 'active',
+          create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          last_login_time TIMESTAMP
+        )
+      `)
+      console.log('✓ admin_users 表创建成功')
+    } else {
+      console.log('✓ admin_users 表已存在')
+    }
+    await createIndexIfNotExists('idx_admin_users_username', 'CREATE INDEX idx_admin_users_username ON admin_users(username)')
+    await createIndexIfNotExists('idx_admin_users_status', 'CREATE INDEX idx_admin_users_status ON admin_users(status)')
+
+    // 2. 创建 roles 表
+    if (!(await tableExists('roles'))) {
+      await pool.query(`
+        CREATE TABLE roles (
+          id VARCHAR(100) PRIMARY KEY,
+          name VARCHAR(50) NOT NULL UNIQUE,
+          code VARCHAR(50) NOT NULL UNIQUE,
+          description TEXT,
+          is_system BOOLEAN DEFAULT FALSE,
+          create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `)
+      console.log('✓ roles 表创建成功')
+    } else {
+      console.log('✓ roles 表已存在')
+    }
+    await createIndexIfNotExists('idx_roles_code', 'CREATE INDEX idx_roles_code ON roles(code)')
+    await createIndexIfNotExists('idx_roles_is_system', 'CREATE INDEX idx_roles_is_system ON roles(is_system)')
+
+    // 3. 创建 permissions 表
+    if (!(await tableExists('permissions'))) {
+      await pool.query(`
+        CREATE TABLE permissions (
+          id VARCHAR(100) PRIMARY KEY,
+          code VARCHAR(100) NOT NULL UNIQUE,
+          name VARCHAR(100) NOT NULL,
+          type VARCHAR(20) NOT NULL,
+          parent_id VARCHAR(100),
+          path VARCHAR(200),
+          description TEXT,
+          sort_order INTEGER DEFAULT 0,
+          create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (parent_id) REFERENCES permissions(id) ON DELETE CASCADE
+        )
+      `)
+      console.log('✓ permissions 表创建成功')
+    } else {
+      console.log('✓ permissions 表已存在')
+    }
+    await createIndexIfNotExists('idx_permissions_code', 'CREATE INDEX idx_permissions_code ON permissions(code)')
+    await createIndexIfNotExists('idx_permissions_type', 'CREATE INDEX idx_permissions_type ON permissions(type)')
+    await createIndexIfNotExists('idx_permissions_parent_id', 'CREATE INDEX idx_permissions_parent_id ON permissions(parent_id)')
+    await createIndexIfNotExists('idx_permissions_sort_order', 'CREATE INDEX idx_permissions_sort_order ON permissions(sort_order)')
+
+    // 4. 创建 user_roles 表
+    if (!(await tableExists('user_roles'))) {
+      await pool.query(`
+        CREATE TABLE user_roles (
+          id VARCHAR(100) PRIMARY KEY,
+          user_id VARCHAR(100) NOT NULL,
+          role_id VARCHAR(100) NOT NULL,
+          create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+          UNIQUE(user_id, role_id)
+        )
+      `)
+      console.log('✓ user_roles 表创建成功')
+    } else {
+      console.log('✓ user_roles 表已存在')
+    }
+    await createIndexIfNotExists('idx_user_roles_user_id', 'CREATE INDEX idx_user_roles_user_id ON user_roles(user_id)')
+    await createIndexIfNotExists('idx_user_roles_role_id', 'CREATE INDEX idx_user_roles_role_id ON user_roles(role_id)')
+
+    // 5. 创建 role_permissions 表
+    if (!(await tableExists('role_permissions'))) {
+      await pool.query(`
+        CREATE TABLE role_permissions (
+          id VARCHAR(100) PRIMARY KEY,
+          role_id VARCHAR(100) NOT NULL,
+          permission_id VARCHAR(100) NOT NULL,
+          create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+          FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+          UNIQUE(role_id, permission_id)
+        )
+      `)
+      console.log('✓ role_permissions 表创建成功')
+    } else {
+      console.log('✓ role_permissions 表已存在')
+    }
+    await createIndexIfNotExists('idx_role_permissions_role_id', 'CREATE INDEX idx_role_permissions_role_id ON role_permissions(role_id)')
+    await createIndexIfNotExists('idx_role_permissions_permission_id', 'CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_id)')
+
+    // 6. 初始化系统管理员角色
+    const roleCheck = await pool.query('SELECT id FROM roles WHERE code = $1', ['admin'])
+    if (roleCheck.rows.length === 0) {
+      await pool.query(`
+        INSERT INTO roles (id, name, code, description, is_system) 
+        VALUES ('role_system_admin', '系统管理员', 'admin', '拥有所有权限的系统管理员', TRUE)
+      `)
+      console.log('✓ 系统管理员角色初始化成功')
+    } else {
+      console.log('✓ 系统管理员角色已存在')
+    }
+
+    // 7. 初始化默认权限（菜单权限）
+    const defaultMenuPermissions = [
+      { id: 'perm_menu_operation', code: 'menu:operation', name: '运营中心', path: '/admin/operation', sortOrder: 1 },
+      { id: 'perm_menu_product', code: 'menu:product', name: '商品中心', path: '/admin/product', sortOrder: 2 },
+      { id: 'perm_menu_operation_page', code: 'menu:operation:page', name: '页面管理', path: '/admin/operation/page', sortOrder: 11 },
+      { id: 'perm_menu_operation_carousel', code: 'menu:operation:carousel', name: '轮播图', path: '/admin/operation/carousel', sortOrder: 21 },
+      { id: 'perm_menu_operation_seckill', code: 'menu:operation:seckill', name: '秒杀', path: '/admin/operation/seckill', sortOrder: 22 },
+      { id: 'perm_menu_operation_groupbuy', code: 'menu:operation:groupbuy', name: '团购', path: '/admin/operation/groupbuy', sortOrder: 23 },
+      { id: 'perm_menu_operation_productList', code: 'menu:operation:productList', name: '商品列表', path: '/admin/operation/productList', sortOrder: 24 },
+      { id: 'perm_menu_operation_guessYouLike', code: 'menu:operation:guessYouLike', name: '猜你喜欢', path: '/admin/operation/guessYouLike', sortOrder: 25 },
+      { id: 'perm_menu_product_list', code: 'menu:product:list', name: '商品列表', path: '/admin/product/list', sortOrder: 31 },
+      { id: 'perm_menu_product_image_list', code: 'menu:product:image:list', name: '图片列表', path: '/admin/operation/image/list', sortOrder: 41 },
+      { id: 'perm_menu_product_image_gallery', code: 'menu:product:image:gallery', name: '静态资源', path: '/admin/operation/image/gallery', sortOrder: 42 }
+    ]
+
+    for (const perm of defaultMenuPermissions) {
+      const permCheck = await pool.query('SELECT id FROM permissions WHERE code = $1', [perm.code])
+      if (permCheck.rows.length === 0) {
+        await pool.query(`
+          INSERT INTO permissions (id, code, name, type, path, description, sort_order)
+          VALUES ($1, $2, $3, 'menu', $4, $5, $6)
+        `, [perm.id, perm.code, perm.name, perm.path, `${perm.name}菜单`, perm.sortOrder])
+      }
+    }
+    console.log('✓ 默认菜单权限初始化完成')
+
+    // 8. 初始化默认权限（按钮权限）
+    const defaultButtonPermissions = [
+      { id: 'perm_btn_product_add', code: 'button:product:add', name: '新增商品', parentId: 'perm_menu_product_list', path: 'product:add', sortOrder: 1 },
+      { id: 'perm_btn_product_edit', code: 'button:product:edit', name: '编辑商品', parentId: 'perm_menu_product_list', path: 'product:edit', sortOrder: 2 },
+      { id: 'perm_btn_product_delete', code: 'button:product:delete', name: '删除商品', parentId: 'perm_menu_product_list', path: 'product:delete', sortOrder: 3 },
+      { id: 'perm_btn_page_add', code: 'button:page:add', name: '新增页面', parentId: 'perm_menu_operation_page', path: 'page:add', sortOrder: 11 },
+      { id: 'perm_btn_page_edit', code: 'button:page:edit', name: '编辑页面', parentId: 'perm_menu_operation_page', path: 'page:edit', sortOrder: 12 },
+      { id: 'perm_btn_page_delete', code: 'button:page:delete', name: '删除页面', parentId: 'perm_menu_operation_page', path: 'page:delete', sortOrder: 13 },
+      { id: 'perm_btn_page_publish', code: 'button:page:publish', name: '发布页面', parentId: 'perm_menu_operation_page', path: 'page:publish', sortOrder: 14 }
+    ]
+
+    for (const perm of defaultButtonPermissions) {
+      const permCheck = await pool.query('SELECT id FROM permissions WHERE code = $1', [perm.code])
+      if (permCheck.rows.length === 0) {
+        await pool.query(`
+          INSERT INTO permissions (id, code, name, type, parent_id, path, description, sort_order)
+          VALUES ($1, $2, $3, 'button', $4, $5, $6, $7)
+        `, [perm.id, perm.code, perm.name, perm.parentId, perm.path, `${perm.name}按钮`, perm.sortOrder])
+      }
+    }
+    console.log('✓ 默认按钮权限初始化完成')
+
+    // 9. 给系统管理员角色分配所有权限
+    const adminRole = await pool.query('SELECT id FROM roles WHERE code = $1', ['admin'])
+    if (adminRole.rows.length > 0) {
+      const roleId = adminRole.rows[0].id
+      const allPermissions = await pool.query('SELECT id FROM permissions')
+      
+      for (const perm of allPermissions.rows) {
+        const rpCheck = await pool.query(
+          'SELECT id FROM role_permissions WHERE role_id = $1 AND permission_id = $2',
+          [roleId, perm.id]
+        )
+        if (rpCheck.rows.length === 0) {
+          await pool.query(
+            'INSERT INTO role_permissions (id, role_id, permission_id) VALUES ($1, $2, $3)',
+            [`rp_${roleId}_${perm.id}`, roleId, perm.id]
+          )
+        }
+      }
+      console.log('✓ 系统管理员角色权限分配完成')
+    }
+
+    console.log('✓ 权限管理系统表检查完成\n')
+
+  } catch (error: any) {
+    console.error('✗ 创建权限管理系统表失败:', error.message)
+    throw error
+  }
+}
+
+/**
  * 检查并创建所有必需的表
  * 
  * 所有新增表或表结构变更都应该在此函数中添加
@@ -233,6 +439,7 @@ async function migrateDatabase() {
     // 注意：所有新增表或表结构变更都应该在此处添加对应的函数调用
     await createPagesTable()
     await createDataSourceTables()
+    await createAuthTables()
 
     console.log('\n==========================================')
     console.log('数据库迁移完成！')
