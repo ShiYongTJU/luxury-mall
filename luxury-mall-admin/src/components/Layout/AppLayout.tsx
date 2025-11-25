@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Layout, Menu, Dropdown, Button } from 'antd'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { PermissionRoute } from '../Permission/PermissionRoute'
 import {
   AppstoreOutlined,
   ShoppingOutlined,
@@ -147,6 +148,46 @@ const getSideMenuItems = (): Record<string, any[]> => {
       }
     ]
   }
+}
+
+// 默认路由组件：重定向到用户有权限的第一个页面
+function DefaultRoute() {
+  const permissions = getCurrentPermissions()
+  const isAdmin = permissions.includes('admin') || permissions.some(p => p.startsWith('admin'))
+  
+  // 按优先级排序的菜单权限列表
+  const menuRoutes = [
+    { permission: 'menu:operation:page', path: '/admin/operation/page' },
+    { permission: 'menu:product:list', path: '/admin/product/list' },
+    { permission: 'menu:product:image:list', path: '/admin/operation/image/list' },
+    { permission: 'menu:product:image:gallery', path: '/admin/operation/image/gallery' },
+    { permission: 'menu:operation:carousel', path: '/admin/operation/carousel' },
+    { permission: 'menu:operation:seckill', path: '/admin/operation/seckill' },
+    { permission: 'menu:operation:groupbuy', path: '/admin/operation/groupbuy' },
+    { permission: 'menu:operation:productList', path: '/admin/operation/productList' },
+    { permission: 'menu:operation:guessYouLike', path: '/admin/operation/guessYouLike' },
+    { permission: 'menu:system:permission', path: '/admin/system/permission' },
+    { permission: 'menu:system:role', path: '/admin/system/role' },
+    { permission: 'menu:system:user', path: '/admin/system/user' }
+  ]
+  
+  // 找到用户有权限的第一个页面
+  const firstAvailableRoute = menuRoutes.find(route => 
+    isAdmin || hasPermission(route.permission)
+  )
+  
+  // 如果找到有权限的页面，重定向过去；否则显示欢迎页面
+  if (firstAvailableRoute) {
+    return <Navigate to={firstAvailableRoute.path} replace />
+  }
+  
+  return (
+    <div className="admin-welcome">
+      <AppstoreOutlined className="admin-welcome-icon" />
+      <h2 className="admin-welcome-title">欢迎使用 Luxury Mall 管理后台</h2>
+      <p className="admin-welcome-subtitle">您当前没有任何页面访问权限，请联系管理员</p>
+    </div>
+  )
 }
 
 function AppLayout() {
@@ -331,30 +372,115 @@ function AppLayout() {
         {/* 右侧Content：页面内容 */}
         <Content className="admin-content">
           <Routes>
-            <Route path="product/list" element={<ProductList />} />
-            <Route path="operation/page" element={<PageManagement />} />
-            <Route path="operation/page/design/:id" element={<PageDesigner />} />
-            <Route path="operation/image/list" element={<ImageList />} />
-            <Route path="operation/image/gallery" element={<ImageGallery />} />
-            <Route path="operation/carousel" element={<CarouselManagement />} />
-            <Route path="operation/seckill" element={<SeckillManagement />} />
-            <Route path="operation/groupbuy" element={<GroupbuyManagement />} />
-            <Route path="operation/productList" element={<ProductListManagement />} />
-            <Route path="operation/guessYouLike" element={<GuessYouLikeManagement />} />
-            <Route path="system/permission" element={<PermissionManagement />} />
-            <Route path="system/role" element={<RoleManagement />} />
-            <Route path="system/user" element={<UserManagement />} />
+            <Route 
+              path="product/list" 
+              element={
+                <PermissionRoute permission="menu:product:list">
+                  <ProductList />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/page" 
+              element={
+                <PermissionRoute permission="menu:operation:page">
+                  <PageManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/page/design/:id" 
+              element={
+                <PermissionRoute permission="menu:operation:page">
+                  <PageDesigner />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/image/list" 
+              element={
+                <PermissionRoute permission="menu:product:image:list">
+                  <ImageList />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/image/gallery" 
+              element={
+                <PermissionRoute permission="menu:product:image:gallery">
+                  <ImageGallery />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/carousel" 
+              element={
+                <PermissionRoute permission="menu:operation:carousel">
+                  <CarouselManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/seckill" 
+              element={
+                <PermissionRoute permission="menu:operation:seckill">
+                  <SeckillManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/groupbuy" 
+              element={
+                <PermissionRoute permission="menu:operation:groupbuy">
+                  <GroupbuyManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/productList" 
+              element={
+                <PermissionRoute permission="menu:operation:productList">
+                  <ProductListManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="operation/guessYouLike" 
+              element={
+                <PermissionRoute permission="menu:operation:guessYouLike">
+                  <GuessYouLikeManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="system/permission" 
+              element={
+                <PermissionRoute permission="menu:system:permission">
+                  <PermissionManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="system/role" 
+              element={
+                <PermissionRoute permission="menu:system:role">
+                  <RoleManagement />
+                </PermissionRoute>
+              } 
+            />
+            <Route 
+              path="system/user" 
+              element={
+                <PermissionRoute permission="menu:system:user">
+                  <UserManagement />
+                </PermissionRoute>
+              } 
+            />
             <Route
               path=""
-              element={
-                <div className="admin-welcome">
-                  <AppstoreOutlined className="admin-welcome-icon" />
-                  <h2 className="admin-welcome-title">欢迎使用 Luxury Mall 管理后台</h2>
-                  <p className="admin-welcome-subtitle">高效、安全、专业的管理平台</p>
-                </div>
-              }
+              element={<DefaultRoute />}
             />
-            <Route path="*" element={<Navigate to="/admin/operation/page" replace />} />
+            <Route path="*" element={<DefaultRoute />} />
           </Routes>
         </Content>
       </Layout>
