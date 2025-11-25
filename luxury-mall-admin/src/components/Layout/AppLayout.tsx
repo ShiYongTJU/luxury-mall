@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Layout, Menu, theme, Dropdown, Button } from 'antd'
+import { Layout, Menu, theme, Dropdown, Button, Spin } from 'antd'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
   AppstoreOutlined,
@@ -24,7 +24,7 @@ import GuessYouLikeManagement from '../../pages/Operation/GuessYouLikeManagement
 import PermissionManagement from '../../pages/System/PermissionManagement'
 import RoleManagement from '../../pages/System/RoleManagement'
 import UserManagement from '../../pages/System/UserManagement'
-import { hasPermission, adminLogout, getCurrentPermissions } from '../../api/auth'
+import { hasPermission, adminLogout, getCurrentPermissions, getCurrentAdminUser } from '../../api/auth'
 
 const { Header, Sider, Content } = Layout
 
@@ -152,11 +152,34 @@ function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedTopMenu, setSelectedTopMenu] = useState<string>('operation')
   const [openKeys, setOpenKeys] = useState<string[]>(['operation-management'])
+  const [loading, setLoading] = useState(true)
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const {
     token: { colorBgContainer }
   } = theme.useToken()
+
+  // 页面加载时重新获取用户权限
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      try {
+        setLoading(true)
+        await getCurrentAdminUser()
+        // getCurrentAdminUser 会自动更新 localStorage 中的权限
+        setPermissionsLoaded(true)
+      } catch (error: any) {
+        // 如果获取失败（token 过期等），跳转到登录页
+        console.error('获取用户权限失败:', error)
+        adminLogout()
+        navigate('/admin/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserPermissions()
+  }, [navigate])
 
   // 处理退出登录
   const handleLogout = () => {
@@ -378,7 +401,13 @@ function AppLayout() {
             borderRadius: 8
           }}
         >
-          <Routes>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 16, fontSize: 16, color: '#666' }}>正在加载权限信息...</div>
+            </div>
+          ) : (
+            <Routes>
             <Route path="/admin/product/list" element={<ProductList />} />
             <Route path="/admin/operation/page" element={<PageManagement />} />
             <Route path="/admin/operation/page/design/:id" element={<PageDesigner />} />
@@ -403,6 +432,7 @@ function AppLayout() {
             />
             <Route path="/" element={<Navigate to="/admin/operation/page" replace />} />
           </Routes>
+          )}
         </Content>
       </Layout>
     </Layout>
