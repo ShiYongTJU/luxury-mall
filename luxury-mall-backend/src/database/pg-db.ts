@@ -2547,8 +2547,17 @@ export async function updateRole(id: string, updates: UpdateRoleData): Promise<R
         await client.query(query, values)
       }
       
-      // 更新权限
+      // 更新权限（系统角色不允许修改权限）
       if (updates.permissionIds !== undefined) {
+        // 检查是否是系统角色（同时检查 is_system 和 code）
+        const roleCheck = await client.query(
+          'SELECT is_system, code FROM roles WHERE id = $1',
+          [id]
+        )
+        if (roleCheck.rows.length > 0 && (roleCheck.rows[0].is_system || roleCheck.rows[0].code === 'admin')) {
+          throw new Error('系统管理员角色不允许修改权限')
+        }
+        
         // 删除旧权限
         await client.query('DELETE FROM role_permissions WHERE role_id = $1', [id])
         // 添加新权限
@@ -2647,24 +2656,60 @@ export async function getPermissionByCode(code: string): Promise<Permission | nu
 
 export async function createPermission(permissionData: CreatePermissionData & { id: string }): Promise<Permission> {
   try {
-    const query = `
-      INSERT INTO permissions (id, code, name, type, parent_id, path, description, sort_order)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, code, name, type, parent_id as "parentId", path, description,
-        sort_order as "sortOrder",
-        create_time as "createTime", update_time as "updateTime"
-    `
-    const result = await getPool().query(query, [
-      permissionData.id,
-      permissionData.code,
-      permissionData.name,
-      permissionData.type,
-      permissionData.parentId || null,
-      permissionData.path || null,
-      permissionData.description || null,
-      permissionData.sortOrder || 0
-    ])
-    return result.rows[0]
+    const client = await getPool().connect()
+    try {
+      await client.query('BEGIN')
+      
+      // 创建权限
+      const insertQuery = `
+        INSERT INTO permissions (id, code, name, type, parent_id, path, description, sort_order)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, code, name, type, parent_id as "parentId", path, description,
+          sort_order as "sortOrder",
+          create_time as "createTime", update_time as "updateTime"
+      `
+      const result = await client.query(insertQuery, [
+        permissionData.id,
+        permissionData.code,
+        permissionData.name,
+        permissionData.type,
+        permissionData.parentId || null,
+        permissionData.path || null,
+        permissionData.description || null,
+        permissionData.sortOrder || 0
+      ])
+      
+      // 自动给系统管理员角色分配新权限
+      const adminRoleQuery = `SELECT id FROM roles WHERE code = 'admin' LIMIT 1`
+      const adminRoleResult = await client.query(adminRoleQuery)
+      
+      if (adminRoleResult.rows.length > 0) {
+        const adminRoleId = adminRoleResult.rows[0].id
+        const rolePermId = `rp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        
+        // 检查是否已存在（避免重复）
+        const checkQuery = `
+          SELECT 1 FROM role_permissions 
+          WHERE role_id = $1 AND permission_id = $2
+        `
+        const checkResult = await client.query(checkQuery, [adminRoleId, permissionData.id])
+        
+        if (checkResult.rows.length === 0) {
+          await client.query(
+            'INSERT INTO role_permissions (id, role_id, permission_id) VALUES ($1, $2, $3)',
+            [rolePermId, adminRoleId, permissionData.id]
+          )
+        }
+      }
+      
+      await client.query('COMMIT')
+      return result.rows[0]
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
   } catch (error) {
     console.error('Database createPermission error:', error)
     throw error
@@ -2733,6 +2778,24 @@ export async function deletePermission(id: string): Promise<boolean> {
 // 获取用户的所有权限代码
 export async function getUserPermissions(userId: string): Promise<string[]> {
   try {
+    // 首先检查用户是否是系统管理员
+    const adminCheckQuery = `
+      SELECT 1
+      FROM user_roles ur
+      INNER JOIN roles r ON ur.role_id = r.id
+      WHERE ur.user_id = $1 AND r.code = 'admin'
+      LIMIT 1
+    `
+    const adminResult = await getPool().query(adminCheckQuery, [userId])
+    
+    // 如果是系统管理员，返回所有权限（包括未来新增的）
+    if (adminResult.rows.length > 0) {
+      const allPermissionsQuery = `SELECT code FROM permissions`
+      const allPermissionsResult = await getPool().query(allPermissionsQuery)
+      return allPermissionsResult.rows.map(row => row.code)
+    }
+    
+    // 否则返回用户通过角色分配的具体权限
     const query = `
       SELECT DISTINCT p.code
       FROM permissions p
@@ -2740,12 +2803,6 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
       INNER JOIN roles r ON rp.role_id = r.id
       INNER JOIN user_roles ur ON r.id = ur.role_id
       WHERE ur.user_id = $1
-      UNION
-      SELECT p.code
-      FROM permissions p
-      INNER JOIN role_permissions rp ON p.id = rp.permission_id
-      INNER JOIN roles r ON rp.role_id = r.id
-      WHERE r.code = 'admin'
     `
     const result = await getPool().query(query, [userId])
     return result.rows.map(row => row.code)

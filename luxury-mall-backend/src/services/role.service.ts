@@ -27,6 +27,13 @@ export class RoleService {
 
   // 创建角色
   static async createRole(roleData: CreateRoleData): Promise<Role> {
+    // 禁止创建系统管理员角色
+    if (roleData.code === 'admin') {
+      const error: AppError = new Error('系统管理员角色不允许通过接口创建')
+      error.statusCode = 403
+      throw error
+    }
+
     // 检查角色代码是否已存在
     const existingRole = await getRoleByCode(roleData.code)
     if (existingRole) {
@@ -53,8 +60,16 @@ export class RoleService {
       throw error
     }
 
-    if (role.isSystem) {
-      const error: AppError = new Error('系统角色不可修改')
+    // 系统角色不允许修改（包括权限）
+    if (role.isSystem || role.code === 'admin') {
+      const error: AppError = new Error('系统管理员角色不可修改')
+      error.statusCode = 403
+      throw error
+    }
+
+    // 如果尝试修改权限，再次检查
+    if (updates.permissionIds !== undefined && (role.isSystem || role.code === 'admin')) {
+      const error: AppError = new Error('系统管理员角色的权限不可修改')
       error.statusCode = 403
       throw error
     }

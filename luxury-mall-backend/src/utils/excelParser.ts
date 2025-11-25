@@ -112,9 +112,22 @@ export async function parseRoleExcel(fileBuffer: Buffer): Promise<{ success: num
         continue
       }
 
+      // 检查是否是系统管理员角色
+      if (row.角色代码 === 'admin') {
+        errors.push(`第${rowNum}行：系统管理员角色不允许通过Excel导入创建或修改`)
+        failed++
+        continue
+      }
+
       // 检查角色代码是否已存在
       const existing = await getRoleByCode(row.角色代码)
       if (existing) {
+        // 如果是系统角色，不允许修改
+        if (existing.isSystem || existing.code === 'admin') {
+          errors.push(`第${rowNum}行：系统管理员角色不允许通过Excel导入修改`)
+          failed++
+          continue
+        }
         errors.push(`第${rowNum}行：角色代码"${row.角色代码}"已存在，跳过`)
         failed++
         continue
