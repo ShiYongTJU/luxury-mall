@@ -18,6 +18,7 @@ import { updateImage, addImage } from './controllers/image.controller'
 import { uploadImage, getUploadedImages, deleteUploadedImage } from './controllers/upload.controller'
 import { errorHandler } from './middleware/errorHandler'
 import { initDatabase } from './database/pg-db'
+import { checkAdminPermission } from './middleware/adminPermission'
 
 dotenv.config()
 
@@ -107,25 +108,25 @@ app.get('/health', (req, res) => {
 
 // API 路由
 app.use('/api/products', productRoutes)
-// 商品更新接口（统一路径）
-app.put('/api/updateProducts', updateProduct)
-app.post('/api/updateProducts', updateProduct)
-// 商品新增接口（统一路径）
-app.post('/api/addProducts', addProduct)
+// 商品更新接口（统一路径）- 需要权限检查
+app.put('/api/updateProducts', ...checkAdminPermission('menu:product:list', 'button:product:edit'), updateProduct)
+app.post('/api/updateProducts', ...checkAdminPermission('menu:product:list', 'button:product:edit'), updateProduct)
+// 商品新增接口（统一路径）- 需要权限检查
+app.post('/api/addProducts', ...checkAdminPermission('menu:product:list', 'button:product:add'), addProduct)
 app.use('/api/images', imageRoutes)
 app.use('/api/pages', pageRoutes)
 app.use('/api/datasource', datasourceRoutes)
-// 图片更新接口（统一路径）
-app.put('/api/updateImages', updateImage)
-app.post('/api/updateImages', updateImage)
-// 图片新增接口（统一路径）
-app.post('/api/addImages', addImage)
-// 图片上传接口
-app.post('/api/upload/image', uploadImage)
-// 获取已上传的图片文件列表
-app.get('/api/upload/images', getUploadedImages)
-// 删除已上传的图片文件
-app.delete('/api/upload/images/:filename', deleteUploadedImage)
+// 图片更新接口（统一路径）- 需要权限检查
+app.put('/api/updateImages', ...checkAdminPermission('menu:product:image:list', 'button:image:edit'), updateImage)
+app.post('/api/updateImages', ...checkAdminPermission('menu:product:image:list', 'button:image:edit'), updateImage)
+// 图片新增接口（统一路径）- 需要权限检查
+app.post('/api/addImages', ...checkAdminPermission('menu:product:image:list', 'button:image:add'), addImage)
+// 图片上传接口 - 需要权限检查
+app.post('/api/upload/image', ...checkAdminPermission('menu:product:image:list', 'button:image:add'), uploadImage)
+// 获取已上传的图片文件列表 - 需要菜单权限
+app.get('/api/upload/images', ...checkAdminPermission('menu:product:image:list'), getUploadedImages)
+// 删除已上传的图片文件 - 需要权限检查
+app.delete('/api/upload/images/:filename', ...checkAdminPermission('menu:product:image:list', 'button:image:delete'), deleteUploadedImage)
 // 静态文件服务（用于访问上传的图片）
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 app.use('/api/search', searchRoutes)

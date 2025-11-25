@@ -26,6 +26,7 @@ import { productApi } from '../../api/product'
 import { Product } from '../../types/product'
 import { getFullImageUrl } from '../../utils/backendUrl'
 import { getDataSourceAbbreviation } from '../../utils/datasource'
+import { PermissionWrapper } from '../../components/Permission/PermissionWrapper'
 import '../Product/ProductList.css'
 
 function GroupbuyManagement() {
@@ -321,28 +322,32 @@ function GroupbuyManagement() {
       fixed: 'right' as const,
       render: (_: any, record: DataSourceItem) => (
         <Space size="small">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要删除吗？"
-            description="删除后无法恢复"
-            onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
-          >
+          <PermissionWrapper permission="button:groupbuy:edit">
             <Button
               type="link"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
             >
-              删除
+              编辑
             </Button>
-          </Popconfirm>
+          </PermissionWrapper>
+          <PermissionWrapper permission="button:groupbuy:delete">
+            <Popconfirm
+              title="确定要删除吗？"
+              description="删除后无法恢复"
+              onConfirm={() => handleDelete(record)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+              >
+                删除
+              </Button>
+            </Popconfirm>
+          </PermissionWrapper>
         </Space>
       )
     }
@@ -382,13 +387,15 @@ function GroupbuyManagement() {
               >
                 重置
               </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-              >
-                新增
-              </Button>
+              <PermissionWrapper permission="button:groupbuy:add">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAdd}
+                >
+                  新增
+                </Button>
+              </PermissionWrapper>
             </Space>
           </Form.Item>
         </Form>

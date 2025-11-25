@@ -17,6 +17,7 @@ import { Product, ProductQueryParams } from '../../types/product'
 import type { ColumnsType } from 'antd/es/table'
 import ImageSelector from '../../components/ImageSelector/ImageSelector'
 import { getFullImageUrl } from '../../utils/backendUrl'
+import { PermissionWrapper } from '../../components/Permission/PermissionWrapper'
 import './ProductList.css'
 
 function ProductList() {
@@ -581,13 +582,15 @@ function ProductList() {
       width: 100,
       fixed: 'right' as const,
       render: (_: any, record: Product) => (
-        <Button
-          type="link"
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(record)}
-        >
-          编辑
-        </Button>
+        <PermissionWrapper permission="button:product:edit">
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
+            编辑
+          </Button>
+        </PermissionWrapper>
       )
     }
   ]
@@ -661,13 +664,15 @@ function ProductList() {
               重置
             </Button>
           </Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-          >
-            新增商品
-          </Button>
+          <PermissionWrapper permission="button:product:add">
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+            >
+              新增商品
+            </Button>
+          </PermissionWrapper>
         </div>
 
         <Table

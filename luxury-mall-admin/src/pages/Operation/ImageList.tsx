@@ -21,6 +21,7 @@ import { imageApi } from '../../api/image'
 import { Image, ImageQueryParams } from '../../types/image'
 import type { ColumnsType } from 'antd/es/table'
 import { getFullImageUrl, getImageBaseUrl } from '../../utils/backendUrl'
+import { PermissionWrapper } from '../../components/Permission/PermissionWrapper'
 import '../Product/ProductList.css'
 
 function ImageList() {
@@ -631,13 +632,15 @@ function ImageList() {
       width: 100,
       fixed: 'right' as const,
       render: (_: any, record: Image) => (
-        <Button
-          type="link"
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(record)}
-        >
-          编辑
-        </Button>
+        <PermissionWrapper permission="button:image:edit">
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
+            编辑
+          </Button>
+        </PermissionWrapper>
       )
     }
   ]
@@ -716,13 +719,15 @@ function ImageList() {
               重置
             </Button>
           </Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-          >
-            新增图片
-          </Button>
+          <PermissionWrapper permission="button:image:add">
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+            >
+              新增图片
+            </Button>
+          </PermissionWrapper>
         </div>
 
         <Table

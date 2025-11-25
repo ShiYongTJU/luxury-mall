@@ -25,6 +25,7 @@ import { useNavigate } from 'react-router-dom'
 import { pageApi } from '../../api/page'
 import { Page, PageQueryParams, PageType, CreatePageData, UpdatePageData } from '../../types/page'
 import type { ColumnsType } from 'antd/es/table'
+import { PermissionWrapper } from '../../components/Permission/PermissionWrapper'
 import '../Product/ProductList.css'
 
 const { Option } = Select
@@ -264,13 +265,15 @@ function PageManagement() {
       fixed: 'right' as const,
       render: (_: any, record: Page) => (
         <Space size="small">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
+          <PermissionWrapper permission="button:page:edit">
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            >
+              编辑
+            </Button>
+          </PermissionWrapper>
           <Button
             type="link"
             icon={<ToolOutlined />}
@@ -278,36 +281,40 @@ function PageManagement() {
           >
             装修
           </Button>
-          <Popconfirm
-            title="确定要发布这个页面吗？"
-            description="发布后，其他所有页面将自动取消发布"
-            onConfirm={() => handlePublish(record)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button
-              type="link"
-              icon={<RocketOutlined />}
-              disabled={record.isPublished}
+          <PermissionWrapper permission="button:page:publish">
+            <Popconfirm
+              title="确定要发布这个页面吗？"
+              description="发布后，其他所有页面将自动取消发布"
+              onConfirm={() => handlePublish(record)}
+              okText="确定"
+              cancelText="取消"
             >
-              发布
-            </Button>
-          </Popconfirm>
-          <Popconfirm
-            title="确定要删除这个页面吗？"
-            description="删除后无法恢复"
-            onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
+              <Button
+                type="link"
+                icon={<RocketOutlined />}
+                disabled={record.isPublished}
+              >
+                发布
+              </Button>
+            </Popconfirm>
+          </PermissionWrapper>
+          <PermissionWrapper permission="button:page:delete">
+            <Popconfirm
+              title="确定要删除这个页面吗？"
+              description="删除后无法恢复"
+              onConfirm={() => handleDelete(record)}
+              okText="确定"
+              cancelText="取消"
             >
-              删除
-            </Button>
-          </Popconfirm>
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+              >
+                删除
+              </Button>
+            </Popconfirm>
+          </PermissionWrapper>
         </Space>
       )
     }
@@ -353,13 +360,15 @@ function PageManagement() {
               >
                 重置
               </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-              >
-                新增
-              </Button>
+              <PermissionWrapper permission="button:page:add">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAdd}
+                >
+                  新增
+                </Button>
+              </PermissionWrapper>
             </Space>
           </Form.Item>
         </Form>
