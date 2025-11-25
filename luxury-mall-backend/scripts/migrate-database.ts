@@ -345,6 +345,7 @@ async function createAuthTables() {
     const defaultMenuPermissions = [
       { id: 'perm_menu_operation', code: 'menu:operation', name: '运营中心', path: '/admin/operation', sortOrder: 1 },
       { id: 'perm_menu_product', code: 'menu:product', name: '商品中心', path: '/admin/product', sortOrder: 2 },
+      { id: 'perm_menu_system', code: 'menu:system', name: '系统管理', path: '/admin/system', sortOrder: 3 },
       { id: 'perm_menu_operation_page', code: 'menu:operation:page', name: '页面管理', path: '/admin/operation/page', sortOrder: 11 },
       { id: 'perm_menu_operation_carousel', code: 'menu:operation:carousel', name: '轮播图', path: '/admin/operation/carousel', sortOrder: 21 },
       { id: 'perm_menu_operation_seckill', code: 'menu:operation:seckill', name: '秒杀', path: '/admin/operation/seckill', sortOrder: 22 },
@@ -353,7 +354,10 @@ async function createAuthTables() {
       { id: 'perm_menu_operation_guessYouLike', code: 'menu:operation:guessYouLike', name: '猜你喜欢', path: '/admin/operation/guessYouLike', sortOrder: 25 },
       { id: 'perm_menu_product_list', code: 'menu:product:list', name: '商品列表', path: '/admin/product/list', sortOrder: 31 },
       { id: 'perm_menu_product_image_list', code: 'menu:product:image:list', name: '图片列表', path: '/admin/operation/image/list', sortOrder: 41 },
-      { id: 'perm_menu_product_image_gallery', code: 'menu:product:image:gallery', name: '静态资源', path: '/admin/operation/image/gallery', sortOrder: 42 }
+      { id: 'perm_menu_product_image_gallery', code: 'menu:product:image:gallery', name: '静态资源', path: '/admin/operation/image/gallery', sortOrder: 42 },
+      { id: 'perm_menu_system_permission', code: 'menu:system:permission', name: '权限管理', path: '/admin/system/permission', sortOrder: 51 },
+      { id: 'perm_menu_system_role', code: 'menu:system:role', name: '角色管理', path: '/admin/system/role', sortOrder: 52 },
+      { id: 'perm_menu_system_user', code: 'menu:system:user', name: '用户管理', path: '/admin/system/user', sortOrder: 53 }
     ]
 
     for (const perm of defaultMenuPermissions) {

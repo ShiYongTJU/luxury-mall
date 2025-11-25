@@ -221,6 +221,12 @@ function AppLayout() {
       return ['/admin/operation/productList']
     } else if (path.includes('/admin/operation/guessYouLike')) {
       return ['/admin/operation/guessYouLike']
+    } else if (path.includes('/admin/system/permission')) {
+      return ['/admin/system/permission']
+    } else if (path.includes('/admin/system/role')) {
+      return ['/admin/system/role']
+    } else if (path.includes('/admin/system/user')) {
+      return ['/admin/system/user']
     }
     return []
   }
@@ -252,6 +258,10 @@ function AppLayout() {
       } else {
         setOpenKeys(['operation-management', 'data-source-management'])
       }
+    } else if (path.includes('/admin/system')) {
+      setSelectedTopMenu('system')
+      // 系统管理菜单始终展开
+      setOpenKeys(['system-management'])
     }
   }, [location.pathname])
 
