@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Excel 文件
+*.xlsx
+*.xls
+*.xlsm
+*.xlsb
