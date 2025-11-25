@@ -601,8 +601,8 @@ function ProductList() {
   }
 
   return (
-    <div>
-      <Card title="商品列表" style={{ marginBottom: 16 }}>
+    <>
+      <Card title="商品列表">
         <Form
           form={form}
           layout="inline"
@@ -1539,7 +1539,7 @@ function ProductList() {
         }}
         title={imageSelectorTarget === 'mainImage' ? '选择商品主图' : '选择图片'}
       />
-    </div>
+    </>
   )
 }
 

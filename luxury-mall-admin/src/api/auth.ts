@@ -129,6 +129,12 @@ export const getCurrentAdminUser = async (): Promise<AdminUser> => {
   if (response.data.permissions) {
     localStorage.setItem('admin_permissions', JSON.stringify(response.data.permissions))
   }
+  // 更新用户信息
+  if (response.data.id) {
+    const userData = { ...response.data }
+    delete userData.permissions // 权限单独存储
+    localStorage.setItem('admin_user', JSON.stringify(userData))
+  }
   return response.data
 }
 

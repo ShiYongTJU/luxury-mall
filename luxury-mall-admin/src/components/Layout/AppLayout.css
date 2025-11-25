@@ -176,8 +176,8 @@
 
 /* 内容区域样式优化 */
 .admin-content {
-  margin: 24px 16px;
-  padding: 24px;
+  margin: 0;
+  padding: 16px;
   min-height: 280px;
   background: var(--content-bg);
   border-radius: var(--border-radius);
@@ -238,6 +238,15 @@
   color: #6b7280;
 }
 
+/* 页面内容统一间距 */
+.admin-content .ant-card {
+  margin-bottom: 0;
+}
+
+.admin-content > div:first-child {
+  margin-top: 0;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .admin-logo {
@@ -247,8 +256,8 @@
   }
   
   .admin-content {
-    margin: 16px 8px;
-    padding: 16px;
+    margin: 0;
+    padding: 12px;
   }
 }
 

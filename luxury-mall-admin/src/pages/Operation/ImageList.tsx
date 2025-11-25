@@ -651,8 +651,8 @@ function ImageList() {
   }
 
   return (
-    <div>
-      <Card title="图片列表" style={{ marginBottom: 16 }}>
+    <>
+      <Card title="图片列表">
         <Form
           form={form}
           layout="inline"
@@ -885,7 +885,7 @@ function ImageList() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   )
 }
 

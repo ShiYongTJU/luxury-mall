@@ -25,7 +25,7 @@ import GuessYouLikeManagement from '../../pages/Operation/GuessYouLikeManagement
 import PermissionManagement from '../../pages/System/PermissionManagement'
 import RoleManagement from '../../pages/System/RoleManagement'
 import UserManagement from '../../pages/System/UserManagement'
-import { hasPermission, adminLogout, getCurrentPermissions } from '../../api/auth'
+import { hasPermission, adminLogout, getCurrentPermissions, AdminUser } from '../../api/auth'
 import './AppLayout.css'
 
 const { Header, Sider, Content } = Layout
@@ -277,6 +277,15 @@ function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   
+  // 获取当前用户信息
+  const getCurrentUser = (): AdminUser | null => {
+    const userStr = localStorage.getItem('admin_user')
+    return userStr ? JSON.parse(userStr) : null
+  }
+  
+  const currentUser = getCurrentUser()
+  const username = currentUser?.username || '用户'
+  
   // 获取初始选中的一级菜单：找到第一个有子菜单的一级菜单
   const getInitialTopMenu = (): string => {
     const sideMenuItems = getSideMenuItems()
@@ -298,8 +307,8 @@ function AppLayout() {
   const getInitialOpenKeys = (): string[] => {
     const sideMenuItems = getSideMenuItems()
     const menuItems = sideMenuItems[selectedTopMenu] || []
-    if (menuItems.length > 0) {
-      return [menuItems[0].key]
+    if (menuItems.length > 0 && menuItems[0].key) {
+      return [String(menuItems[0].key)]
     }
     return []
   }
@@ -329,28 +338,34 @@ function AppLayout() {
 
   // 处理一级菜单点击
   const handleTopMenuClick = ({ key }: { key: string }) => {
+    const keyStr = String(key || '')
     const sideMenuItems = getSideMenuItems()
-    const menuItems = sideMenuItems[key] || []
+    const menuItems = sideMenuItems[keyStr] || []
     
     // 如果该一级菜单下没有任何子菜单，不切换
     if (menuItems.length === 0) {
       return
     }
     
-    setSelectedTopMenu(key)
+    setSelectedTopMenu(keyStr)
     
     // 自动展开第一个二级菜单
     if (menuItems.length > 0 && menuItems[0].children && menuItems[0].children.length > 0) {
-      setOpenKeys([menuItems[0].key])
-      // 导航到第一个子菜单项
-      navigate(menuItems[0].children[0].key)
+      const firstMenuKey = String(menuItems[0].key || '')
+      const firstChildKey = String(menuItems[0].children[0].key || '')
+      if (firstMenuKey && firstChildKey) {
+        setOpenKeys([firstMenuKey])
+        // 导航到第一个子菜单项
+        navigate(firstChildKey)
+      }
     }
   }
 
   // 处理二级三级菜单点击
   const handleSideMenuClick = ({ key }: { key: string }) => {
-    if (key.startsWith('/')) {
-      navigate(key)
+    const keyStr = String(key || '')
+    if (keyStr.startsWith('/')) {
+      navigate(keyStr)
     }
   }
 
@@ -360,8 +375,11 @@ function AppLayout() {
   }
 
   // 获取当前选中的菜单项
-  const getSelectedKeys = () => {
+  const getSelectedKeys = (): string[] => {
     const path = location.pathname
+    if (typeof path !== 'string') {
+      return []
+    }
     if (path.includes('/admin/product/list')) {
       return ['/admin/product/list']
     } else if (path.includes('/admin/operation/page')) {
@@ -405,19 +423,19 @@ function AppLayout() {
         
         if (path.includes('/admin/product/list')) {
           const productManagement = productMenu.find((m: any) => m.key === 'product-management')
-          if (productManagement) {
-            openKeysToSet.push('product-management')
+          if (productManagement && productManagement.key) {
+            openKeysToSet.push(String(productManagement.key))
           }
         } else if (path.includes('/admin/operation/image/list') || path.includes('/admin/operation/image/gallery')) {
           const materialManagement = productMenu.find((m: any) => m.key === 'material-management')
-          if (materialManagement) {
-            openKeysToSet.push('material-management')
+          if (materialManagement && materialManagement.key) {
+            openKeysToSet.push(String(materialManagement.key))
           }
         } else {
           // 展开所有有权限的二级菜单
           productMenu.forEach((m: any) => {
-            if (m.children && m.children.length > 0) {
-              openKeysToSet.push(m.key)
+            if (m.children && m.children.length > 0 && m.key) {
+              openKeysToSet.push(String(m.key))
             }
           })
         }
@@ -433,8 +451,8 @@ function AppLayout() {
         
         if (path.includes('/admin/operation/page')) {
           const operationManagement = operationMenu.find((m: any) => m.key === 'operation-management')
-          if (operationManagement) {
-            openKeysToSet.push('operation-management')
+          if (operationManagement && operationManagement.key) {
+            openKeysToSet.push(String(operationManagement.key))
           }
         } else if (path.includes('/admin/operation/carousel') || 
                    path.includes('/admin/operation/seckill') || 
@@ -442,14 +460,14 @@ function AppLayout() {
                    path.includes('/admin/operation/productList') || 
                    path.includes('/admin/operation/guessYouLike')) {
           const dataSourceManagement = operationMenu.find((m: any) => m.key === 'data-source-management')
-          if (dataSourceManagement) {
-            openKeysToSet.push('data-source-management')
+          if (dataSourceManagement && dataSourceManagement.key) {
+            openKeysToSet.push(String(dataSourceManagement.key))
           }
         } else {
           // 展开所有有权限的二级菜单
           operationMenu.forEach((m: any) => {
-            if (m.children && m.children.length > 0) {
-              openKeysToSet.push(m.key)
+            if (m.children && m.children.length > 0 && m.key) {
+              openKeysToSet.push(String(m.key))
             }
           })
         }
@@ -461,7 +479,9 @@ function AppLayout() {
         setSelectedTopMenu('system')
         // 系统管理菜单始终展开
         const systemMenu = sideMenuItems.system
-        const openKeysToSet = systemMenu.map((m: any) => m.key)
+        const openKeysToSet = systemMenu
+          .filter((m: any) => m.key)
+          .map((m: any) => String(m.key))
         setOpenKeys(openKeysToSet)
       }
     }
@@ -506,7 +526,7 @@ function AppLayout() {
               style={{ color: '#fff', marginRight: 16 }}
               className="admin-user-btn"
             >
-              用户
+              {username}
             </Button>
           </Dropdown>
         </div>

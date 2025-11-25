@@ -354,7 +354,7 @@ function ProductListManagement() {
   ]
 
   return (
-    <div style={{ padding: '24px' }}>
+    <>
       <Card>
         {/* 查询表单 */}
         <Form
@@ -496,7 +496,7 @@ function ProductListManagement() {
         multiple={true}
         title="选择商品"
       />
-    </div>
+    </>
   )
 }
 

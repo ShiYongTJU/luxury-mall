@@ -338,7 +338,7 @@ function CarouselManagement() {
   ]
 
   return (
-    <div style={{ padding: '24px' }}>
+    <>
       <Card>
         {/* 查询表单 */}
         <Form
@@ -478,7 +478,7 @@ function CarouselManagement() {
         multiple={true}
         title="选择商品（将作为轮播图项）"
       />
-    </div>
+    </>
   )
 }
 

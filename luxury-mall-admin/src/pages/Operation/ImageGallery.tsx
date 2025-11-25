@@ -152,7 +152,7 @@ function ImageGallery() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
 
   return (
-    <div style={{ padding: '24px' }}>
+    <>
       <Card>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0 }}>静态资源</h2>
@@ -203,7 +203,7 @@ function ImageGallery() {
           scroll={{ x: 1200 }}
         />
       </Card>
-    </div>
+    </>
   )
 }
 

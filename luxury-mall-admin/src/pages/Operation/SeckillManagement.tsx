@@ -357,7 +357,7 @@ function SeckillManagement() {
   ]
 
   return (
-    <div style={{ padding: '24px' }}>
+    <>
       <Card>
         {/* 查询表单 */}
         <Form
@@ -499,7 +499,7 @@ function SeckillManagement() {
         multiple={true}
         title="选择商品"
       />
-    </div>
+    </>
   )
 }
 
