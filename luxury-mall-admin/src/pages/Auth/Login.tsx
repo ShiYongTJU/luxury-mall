@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Form, Input, Button, Card, message } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { adminLogin } from '../../api/auth'
@@ -55,6 +55,12 @@ const Login = () => {
             <Button type="primary" htmlType="submit" block loading={loading}>
               登录
             </Button>
+          </Form.Item>
+
+          <Form.Item>
+            <div style={{ textAlign: 'center' }}>
+              <Link to="/admin/register">还没有账号？立即注册</Link>
+            </div>
           </Form.Item>
         </Form>
       </Card>

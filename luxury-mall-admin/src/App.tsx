@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/Layout/AppLayout'
 import Login from './pages/Auth/Login'
+import Register from './pages/Auth/Register'
 
 // 路由守卫组件
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -16,6 +17,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/admin/login" element={<Login />} />
+        <Route path="/admin/register" element={<Register />} />
         <Route
           path="/admin/*"
           element={
