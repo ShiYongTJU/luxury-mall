@@ -24,7 +24,7 @@ import GuessYouLikeManagement from '../../pages/Operation/GuessYouLikeManagement
 import PermissionManagement from '../../pages/System/PermissionManagement'
 import RoleManagement from '../../pages/System/RoleManagement'
 import UserManagement from '../../pages/System/UserManagement'
-import { hasPermission, adminLogout, getCurrentPermissions, getCurrentAdminUser } from '../../api/auth'
+import { hasPermission, adminLogout, getCurrentPermissions } from '../../api/auth'
 import './AppLayout.css'
 
 const { Header, Sider, Content } = Layout
@@ -153,29 +153,8 @@ function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedTopMenu, setSelectedTopMenu] = useState<string>('operation')
   const [openKeys, setOpenKeys] = useState<string[]>(['operation-management'])
-  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
-
-  // 页面加载时重新获取用户权限
-  useEffect(() => {
-    const fetchUserPermissions = async () => {
-      try {
-        setLoading(true)
-        await getCurrentAdminUser()
-        // getCurrentAdminUser 会自动更新 localStorage 中的权限
-      } catch (error: any) {
-        // 如果获取失败（token 过期等），跳转到登录页
-        console.error('获取用户权限失败:', error)
-        adminLogout()
-        navigate('/admin/login')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchUserPermissions()
-  }, [navigate])
 
   // 处理退出登录
   const handleLogout = () => {
@@ -351,13 +330,7 @@ function AppLayout() {
 
         {/* 右侧Content：页面内容 */}
         <Content className="admin-content">
-          {loading ? (
-            <div className="admin-loading">
-              <Spin size="large" />
-              <div style={{ marginTop: 16, fontSize: 16, color: '#666' }}>正在加载权限信息...</div>
-            </div>
-          ) : (
-            <Routes>
+          <Routes>
             <Route path="product/list" element={<ProductList />} />
             <Route path="operation/page" element={<PageManagement />} />
             <Route path="operation/page/design/:id" element={<PageDesigner />} />
@@ -383,7 +356,6 @@ function AppLayout() {
             />
             <Route path="*" element={<Navigate to="/admin/operation/page" replace />} />
           </Routes>
-          )}
         </Content>
       </Layout>
     </Layout>

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Form, Input, Button, Card, message } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { adminLogin } from '../../api/auth'
+import { resetPermissionsFetchFlag } from '../../App'
 import './Login.css'
 
 const Login = () => {
@@ -13,6 +14,8 @@ const Login = () => {
     try {
       setLoading(true)
       await adminLogin(values)
+      // 登录成功后重置权限获取标记，确保能获取最新权限
+      resetPermissionsFetchFlag()
       message.success('登录成功')
       navigate('/admin/operation/page')
     } catch (error: any) {
