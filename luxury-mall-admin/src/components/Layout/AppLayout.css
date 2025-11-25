@@ -30,15 +30,7 @@
   z-index: 100;
 }
 
-.admin-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.2);
-}
+/* 移除header底部的线 */
 
 /* Logo区域 */
 .admin-logo {
@@ -49,14 +41,12 @@
   color: #fff;
   display: flex;
   align-items: center;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
   transition: var(--transition);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .admin-logo:hover {
-  background: rgba(255, 255, 255, 0.15);
+  /* 移除hover背景 */
 }
 
 /* 顶部菜单样式 */

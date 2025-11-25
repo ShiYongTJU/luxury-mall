@@ -363,10 +363,24 @@ async function createAuthTables() {
     for (const perm of defaultMenuPermissions) {
       const permCheck = await pool.query('SELECT id FROM permissions WHERE code = $1', [perm.code])
       if (permCheck.rows.length === 0) {
+        // 确定父权限ID
+        let parentId: string | null = null
+        if (perm.code === 'menu:operation:page' || perm.code === 'menu:operation:carousel' || 
+            perm.code === 'menu:operation:seckill' || perm.code === 'menu:operation:groupbuy' || 
+            perm.code === 'menu:operation:productList' || perm.code === 'menu:operation:guessYouLike') {
+          parentId = 'perm_menu_operation'
+        } else if (perm.code === 'menu:product:list' || perm.code === 'menu:product:image:list' || 
+                   perm.code === 'menu:product:image:gallery') {
+          parentId = 'perm_menu_product'
+        } else if (perm.code === 'menu:system:permission' || perm.code === 'menu:system:role' || 
+                   perm.code === 'menu:system:user') {
+          parentId = 'perm_menu_system'
+        }
+        
         await pool.query(`
-          INSERT INTO permissions (id, code, name, type, path, description, sort_order)
-          VALUES ($1, $2, $3, 'menu', $4, $5, $6)
-        `, [perm.id, perm.code, perm.name, perm.path, `${perm.name}菜单`, perm.sortOrder])
+          INSERT INTO permissions (id, code, name, type, parent_id, path, description, sort_order)
+          VALUES ($1, $2, $3, 'menu', $4, $5, $6, $7)
+        `, [perm.id, perm.code, perm.name, parentId, perm.path, `${perm.name}菜单`, perm.sortOrder])
       }
     }
     console.log('✓ 默认菜单权限初始化完成')
@@ -379,7 +393,20 @@ async function createAuthTables() {
       { id: 'perm_btn_page_add', code: 'button:page:add', name: '新增页面', parentId: 'perm_menu_operation_page', path: 'page:add', sortOrder: 11 },
       { id: 'perm_btn_page_edit', code: 'button:page:edit', name: '编辑页面', parentId: 'perm_menu_operation_page', path: 'page:edit', sortOrder: 12 },
       { id: 'perm_btn_page_delete', code: 'button:page:delete', name: '删除页面', parentId: 'perm_menu_operation_page', path: 'page:delete', sortOrder: 13 },
-      { id: 'perm_btn_page_publish', code: 'button:page:publish', name: '发布页面', parentId: 'perm_menu_operation_page', path: 'page:publish', sortOrder: 14 }
+      { id: 'perm_btn_page_publish', code: 'button:page:publish', name: '发布页面', parentId: 'perm_menu_operation_page', path: 'page:publish', sortOrder: 14 },
+      // 权限管理按钮权限
+      { id: 'perm_btn_permission_add', code: 'button:permission:add', name: '新增权限', parentId: 'perm_menu_system_permission', path: 'permission:add', sortOrder: 81 },
+      { id: 'perm_btn_permission_edit', code: 'button:permission:edit', name: '编辑权限', parentId: 'perm_menu_system_permission', path: 'permission:edit', sortOrder: 82 },
+      { id: 'perm_btn_permission_delete', code: 'button:permission:delete', name: '删除权限', parentId: 'perm_menu_system_permission', path: 'permission:delete', sortOrder: 83 },
+      { id: 'perm_btn_permission_import', code: 'button:permission:import', name: '导入权限', parentId: 'perm_menu_system_permission', path: 'permission:import', sortOrder: 84 },
+      // 角色管理按钮权限
+      { id: 'perm_btn_role_add', code: 'button:role:add', name: '新增角色', parentId: 'perm_menu_system_role', path: 'role:add', sortOrder: 91 },
+      { id: 'perm_btn_role_edit', code: 'button:role:edit', name: '编辑角色', parentId: 'perm_menu_system_role', path: 'role:edit', sortOrder: 92 },
+      { id: 'perm_btn_role_delete', code: 'button:role:delete', name: '删除角色', parentId: 'perm_menu_system_role', path: 'role:delete', sortOrder: 93 },
+      { id: 'perm_btn_role_import', code: 'button:role:import', name: '导入角色', parentId: 'perm_menu_system_role', path: 'role:import', sortOrder: 94 },
+      // 用户管理按钮权限
+      { id: 'perm_btn_user_add', code: 'button:user:add', name: '新增用户', parentId: 'perm_menu_system_user', path: 'user:add', sortOrder: 101 },
+      { id: 'perm_btn_user_edit', code: 'button:user:edit', name: '编辑用户', parentId: 'perm_menu_system_user', path: 'user:edit', sortOrder: 102 }
     ]
 
     for (const perm of defaultButtonPermissions) {

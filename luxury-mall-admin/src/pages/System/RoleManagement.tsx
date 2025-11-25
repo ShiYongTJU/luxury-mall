@@ -108,14 +108,39 @@ const RoleManagement = () => {
 
   const handleUpload = async (file: File) => {
     try {
+      setLoading(true)
       const result = await uploadRoleExcel(file)
-      message.success(`导入完成：成功 ${result.success} 条，失败 ${result.failed} 条`)
-      if (result.errors.length > 0) {
-        console.error('导入错误：', result.errors)
+      
+      if (result.success > 0) {
+        message.success(`导入完成：成功 ${result.success} 条${result.failed > 0 ? `，失败 ${result.failed} 条` : ''}`)
+      } else {
+        message.warning(`导入完成：成功 ${result.success} 条，失败 ${result.failed} 条`)
       }
+      
+      // 如果有错误，显示详细错误信息
+      if (result.errors && result.errors.length > 0) {
+        Modal.error({
+          title: '导入错误详情',
+          width: 600,
+          content: (
+            <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {result.errors.map((error, index) => (
+                  <li key={index} style={{ marginBottom: 8, color: '#ff4d4f' }}>
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        })
+      }
+      
       loadRoles()
     } catch (error: any) {
-      message.error('导入失败')
+      message.error(error.response?.data?.message || error.message || '导入失败')
+    } finally {
+      setLoading(false)
     }
     return false
   }
@@ -207,7 +232,7 @@ const RoleManagement = () => {
               新增角色
             </Button>
           </PermissionWrapper>
-          <PermissionWrapper permission="button:role:import">
+          <PermissionWrapper permissions={['button:role:import', 'menu:system:role']} mode="any">
             <Upload
               beforeUpload={handleUpload}
               showUploadList={false}

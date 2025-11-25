@@ -7,7 +7,9 @@ import {
   createPermission,
   getPermissionByCode,
   createRole,
-  getRoleByCode
+  getRoleByCode,
+  getRoleById,
+  updateRole
 } from '../database/pg-db'
 import { AppError } from '../middleware/errorHandler'
 
@@ -121,18 +123,7 @@ export async function parseRoleExcel(fileBuffer: Buffer): Promise<{ success: num
 
       // 检查角色代码是否已存在
       const existing = await getRoleByCode(row.角色代码)
-      if (existing) {
-        // 如果是系统角色，不允许修改
-        if (existing.isSystem || existing.code === 'admin') {
-          errors.push(`第${rowNum}行：系统管理员角色不允许通过Excel导入修改`)
-          failed++
-          continue
-        }
-        errors.push(`第${rowNum}行：角色代码"${row.角色代码}"已存在，跳过`)
-        failed++
-        continue
-      }
-
+      
       // 解析权限代码列表
       const permissionIds: string[] = []
       if (row.权限代码列表) {
@@ -147,7 +138,46 @@ export async function parseRoleExcel(fileBuffer: Buffer): Promise<{ success: num
         }
       }
 
-      // 创建角色
+      if (existing) {
+        // 如果是系统角色，不允许修改
+        if (existing.isSystem || existing.code === 'admin') {
+          errors.push(`第${rowNum}行：系统角色"${row.角色代码}"不允许通过Excel导入修改`)
+          failed++
+          continue
+        }
+
+        // 角色已存在，更新权限（合并权限）
+        try {
+          // 获取现有角色的完整信息（包含权限）
+          const existingRoleWithPermissions = await getRoleById(existing.id)
+          if (!existingRoleWithPermissions) {
+            errors.push(`第${rowNum}行：无法获取角色"${row.角色代码}"的详细信息`)
+            failed++
+            continue
+          }
+          
+          // 获取现有角色的权限ID
+          const existingPermissionIds = existingRoleWithPermissions.permissions?.map((p: any) => p.id) || []
+          
+          // 合并权限（去重）
+          const mergedPermissionIds = Array.from(new Set([...existingPermissionIds, ...permissionIds]))
+          
+          // 更新角色权限
+          await updateRole(existing.id, {
+            name: row.角色名称 || existing.name, // 如果提供了名称则更新
+            description: row.描述 || existing.description, // 如果提供了描述则更新
+            permissionIds: mergedPermissionIds
+          })
+          
+          success++
+        } catch (error: any) {
+          errors.push(`第${rowNum}行：更新角色"${row.角色代码}"失败：${error.message || '未知错误'}`)
+          failed++
+        }
+        continue
+      }
+
+      // 创建新角色
       const roleId = `role_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       await createRole({
         id: roleId,
