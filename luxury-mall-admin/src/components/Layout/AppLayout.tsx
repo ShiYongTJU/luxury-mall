@@ -406,21 +406,21 @@ function AppLayout() {
             </div>
           ) : (
             <Routes>
-            <Route path="/admin/product/list" element={<ProductList />} />
-            <Route path="/admin/operation/page" element={<PageManagement />} />
-            <Route path="/admin/operation/page/design/:id" element={<PageDesigner />} />
-            <Route path="/admin/operation/image/list" element={<ImageList />} />
-            <Route path="/admin/operation/image/gallery" element={<ImageGallery />} />
-            <Route path="/admin/operation/carousel" element={<CarouselManagement />} />
-            <Route path="/admin/operation/seckill" element={<SeckillManagement />} />
-            <Route path="/admin/operation/groupbuy" element={<GroupbuyManagement />} />
-            <Route path="/admin/operation/productList" element={<ProductListManagement />} />
-            <Route path="/admin/operation/guessYouLike" element={<GuessYouLikeManagement />} />
-            <Route path="/admin/system/permission" element={<PermissionManagement />} />
-            <Route path="/admin/system/role" element={<RoleManagement />} />
-            <Route path="/admin/system/user" element={<UserManagement />} />
+            <Route path="product/list" element={<ProductList />} />
+            <Route path="operation/page" element={<PageManagement />} />
+            <Route path="operation/page/design/:id" element={<PageDesigner />} />
+            <Route path="operation/image/list" element={<ImageList />} />
+            <Route path="operation/image/gallery" element={<ImageGallery />} />
+            <Route path="operation/carousel" element={<CarouselManagement />} />
+            <Route path="operation/seckill" element={<SeckillManagement />} />
+            <Route path="operation/groupbuy" element={<GroupbuyManagement />} />
+            <Route path="operation/productList" element={<ProductListManagement />} />
+            <Route path="operation/guessYouLike" element={<GuessYouLikeManagement />} />
+            <Route path="system/permission" element={<PermissionManagement />} />
+            <Route path="system/role" element={<RoleManagement />} />
+            <Route path="system/user" element={<UserManagement />} />
             <Route
-              path="/admin"
+              path=""
               element={
                 <div style={{ textAlign: 'center', padding: '50px 0' }}>
                   <AppstoreOutlined style={{ fontSize: 64, color: '#1890ff' }} />
@@ -428,7 +428,7 @@ function AppLayout() {
                 </div>
               }
             />
-            <Route path="/" element={<Navigate to="/admin/operation/page" replace />} />
+            <Route path="*" element={<Navigate to="/admin/operation/page" replace />} />
           </Routes>
           )}
         </Content>
