@@ -1,0 +1,298 @@
+/* 管理后台布局样式 - 与登录页面风格统一 */
+
+/* 全局变量 */
+:root {
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --header-bg: #001529;
+  --sider-bg: #001529;
+  --content-bg: #f0f2f5;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --border-radius: 8px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 布局容器 */
+.admin-layout {
+  min-height: 100vh;
+  background: var(--content-bg);
+}
+
+/* 顶部Header样式优化 - 与登录页面风格一致 */
+.admin-header {
+  padding: 0;
+  background: var(--primary-gradient) !important;
+  display: flex;
+  align-items: center;
+  border-bottom: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 100;
+}
+
+.admin-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Logo区域 */
+.admin-logo {
+  width: 200px;
+  padding: 0 24px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  transition: var(--transition);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.admin-logo:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* 顶部菜单样式 */
+.admin-top-menu {
+  flex: 1;
+  border-bottom: none !important;
+  line-height: 64px;
+  background: transparent !important;
+}
+
+.admin-top-menu .ant-menu-item {
+  margin: 0 8px;
+  border-radius: 6px;
+  transition: var(--transition);
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.admin-top-menu .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.admin-top-menu .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #fff !important;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+}
+
+.admin-top-menu .ant-menu-item-selected::after {
+  display: none;
+}
+
+/* 用户操作区 */
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding-left: 16px;
+}
+
+.admin-collapse-btn {
+  padding: 0 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  transition: var(--transition);
+  border-radius: 6px;
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.admin-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+}
+
+/* 用户按钮样式 */
+.admin-user-actions .ant-btn {
+  color: #fff !important;
+  border: none;
+  background: transparent;
+  transition: var(--transition);
+}
+
+.admin-user-actions .ant-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+/* 左侧Sider样式优化 - 与登录页面风格一致 */
+.admin-sider {
+  background: linear-gradient(180deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.admin-sider .ant-menu {
+  background: transparent !important;
+  border-right: none !important;
+}
+
+.admin-sider .ant-menu-item {
+  margin: 4px 8px;
+  border-radius: 6px;
+  transition: var(--transition);
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.admin-sider .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.admin-sider .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-left: 3px solid rgba(255, 255, 255, 0.8);
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.admin-sider .ant-menu-submenu-title {
+  margin: 4px 8px;
+  border-radius: 6px;
+  transition: var(--transition);
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.admin-sider .ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.admin-sider .ant-menu-submenu .ant-menu {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+.admin-sider .ant-menu-submenu .ant-menu-item {
+  padding-left: 48px !important;
+}
+
+/* 内容区域样式优化 */
+.admin-content {
+  margin: 24px 16px;
+  padding: 24px;
+  min-height: 280px;
+  background: var(--content-bg);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+}
+
+/* 卡片样式优化 */
+.admin-card {
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+  transition: var(--transition);
+  border: none;
+}
+
+.admin-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+/* 加载状态样式 */
+.admin-loading {
+  text-align: center;
+  padding: 100px 0;
+  background: var(--content-bg);
+  border-radius: var(--border-radius);
+}
+
+.admin-loading .ant-spin {
+  color: #667eea;
+}
+
+/* 欢迎页面样式 */
+.admin-welcome {
+  text-align: center;
+  padding: 80px 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: var(--border-radius);
+}
+
+.admin-welcome-icon {
+  font-size: 80px;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 24px;
+}
+
+.admin-welcome-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.admin-welcome-subtitle {
+  font-size: 16px;
+  color: #6b7280;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .admin-logo {
+    width: 120px;
+    font-size: 16px;
+    padding: 0 12px;
+  }
+  
+  .admin-content {
+    margin: 16px 8px;
+    padding: 16px;
+  }
+}
+
+/* 滚动条样式优化 */
+.admin-sider::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-sider::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-sider::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.admin-sider::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-content > * {
+  animation: fadeIn 0.3s ease-out;
+}
+

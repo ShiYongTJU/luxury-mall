@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Layout, Menu, theme, Dropdown, Button, Spin } from 'antd'
+import { Layout, Menu, Dropdown, Button, Spin } from 'antd'
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
   AppstoreOutlined,
@@ -25,6 +25,7 @@ import PermissionManagement from '../../pages/System/PermissionManagement'
 import RoleManagement from '../../pages/System/RoleManagement'
 import UserManagement from '../../pages/System/UserManagement'
 import { hasPermission, adminLogout, getCurrentPermissions, getCurrentAdminUser } from '../../api/auth'
+import './AppLayout.css'
 
 const { Header, Sider, Content } = Layout
 
@@ -155,9 +156,6 @@ function AppLayout() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
-  const {
-    token: { colorBgContainer }
-  } = theme.useToken()
 
   // 页面加载时重新获取用户权限
   useEffect(() => {
@@ -287,30 +285,10 @@ function AppLayout() {
   }, [location.pathname])
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="admin-layout" style={{ minHeight: '100vh' }}>
       {/* 顶部Header：一级菜单（横向） */}
-      <Header
-        style={{
-          padding: 0,
-          background: '#001529',
-          display: 'flex',
-          alignItems: 'center',
-          borderBottom: '1px solid #002140',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-        }}
-      >
-        <div
-          style={{
-            width: 200,
-            padding: '0 24px',
-            fontSize: 18,
-            fontWeight: 'bold',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            borderRight: '1px solid #002140'
-          }}
-        >
+      <Header className="admin-header">
+        <div className="admin-logo">
           Luxury Mall
         </div>
         <Menu
@@ -319,22 +297,11 @@ function AppLayout() {
           items={getTopMenuItems()}
           onClick={handleTopMenuClick}
           theme="dark"
-          style={{
-            flex: 1,
-            borderBottom: 'none',
-            lineHeight: '64px',
-            background: '#001529'
-          }}
+          className="admin-top-menu"
         />
-        <div style={{ display: 'flex', alignItems: 'center', borderLeft: '1px solid #002140' }}>
+        <div className="admin-user-actions">
           <div
-            style={{
-              padding: '0 16px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              color: '#fff'
-            }}
+            className="admin-collapse-btn"
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -354,6 +321,7 @@ function AppLayout() {
               type="text"
               icon={<UserOutlined />}
               style={{ color: '#fff', marginRight: 16 }}
+              className="admin-user-btn"
             >
               用户
             </Button>
@@ -368,10 +336,7 @@ function AppLayout() {
           collapsible
           collapsed={collapsed}
           width={200}
-          style={{
-            background: '#001529',
-            borderRight: '1px solid #002140'
-          }}
+          className="admin-sider"
         >
           <Menu
             mode="inline"
@@ -381,26 +346,13 @@ function AppLayout() {
             onOpenChange={handleOpenChange}
             items={getSideMenuItems()[selectedTopMenu] || []}
             onClick={handleSideMenuClick}
-            style={{
-              height: '100%',
-              borderRight: 0,
-              background: '#001529'
-            }}
           />
         </Sider>
 
         {/* 右侧Content：页面内容 */}
-        <Content
-          style={{
-            margin: '24px 16px',
-            padding: 24,
-            minHeight: 280,
-            background: colorBgContainer,
-            borderRadius: 8
-          }}
-        >
+        <Content className="admin-content">
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+            <div className="admin-loading">
               <Spin size="large" />
               <div style={{ marginTop: 16, fontSize: 16, color: '#666' }}>正在加载权限信息...</div>
             </div>
@@ -422,9 +374,10 @@ function AppLayout() {
             <Route
               path=""
               element={
-                <div style={{ textAlign: 'center', padding: '50px 0' }}>
-                  <AppstoreOutlined style={{ fontSize: 64, color: '#1890ff' }} />
-                  <h2 style={{ marginTop: 16 }}>欢迎使用 Luxury Mall 管理后台</h2>
+                <div className="admin-welcome">
+                  <AppstoreOutlined className="admin-welcome-icon" />
+                  <h2 className="admin-welcome-title">欢迎使用 Luxury Mall 管理后台</h2>
+                  <p className="admin-welcome-subtitle">高效、安全、专业的管理平台</p>
                 </div>
               }
             />
