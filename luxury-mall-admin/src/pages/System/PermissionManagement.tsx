@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Upload, Space, Tree } from 'antd'
+import { Table, Button, Modal, Form, Input, Select, InputNumber, message, Upload, Space } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   getPermissions,
@@ -114,16 +114,6 @@ const PermissionManagement = () => {
     }
     return false // 阻止默认上传
   }
-
-  // 将权限列表转换为树形数据
-  const treeData = permissions.map(perm => ({
-    title: `${perm.name} (${perm.code})`,
-    key: perm.id,
-    children: perm.children?.map(child => ({
-      title: `${child.name} (${child.code})`,
-      key: child.id
-    }))
-  }))
 
   const columns = [
     {

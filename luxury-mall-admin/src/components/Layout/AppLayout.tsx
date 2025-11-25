@@ -25,7 +25,6 @@ import PermissionManagement from '../../pages/System/PermissionManagement'
 import RoleManagement from '../../pages/System/RoleManagement'
 import UserManagement from '../../pages/System/UserManagement'
 import { hasPermission, adminLogout, getCurrentPermissions } from '../../api/auth'
-import { PermissionWrapper } from '../Permission/PermissionWrapper'
 
 const { Header, Sider, Content } = Layout
 

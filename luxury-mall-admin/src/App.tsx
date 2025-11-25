@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/Layout/AppLayout'
 import Login from './pages/Auth/Login'
-import { getCurrentPermissions } from './api/auth'
 
 // 路由守卫组件
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+import * as jwt from 'jsonwebtoken'
 import {
   getAdminUserByUsername,
   getAdminUserById,
@@ -28,7 +28,7 @@ export class AuthService {
     return jwt.sign(
       { userId, username },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     )
   }
 

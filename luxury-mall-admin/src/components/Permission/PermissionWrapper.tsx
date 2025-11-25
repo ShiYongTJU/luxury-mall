@@ -46,9 +46,8 @@ export const PermissionButton = ({
   permissions,
   mode = 'any',
   fallback = null,
-  children,
-  ...props
-}: PermissionWrapperProps & any) => {
+  children
+}: PermissionWrapperProps) => {
   let hasAccess = false
 
   if (permission) {

@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { API_ROUTES } from './index'
 
 const API_BASE_URL = '/api'
 
